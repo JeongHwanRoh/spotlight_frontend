@@ -3,33 +3,50 @@
 import { useEffect, useRef, useState } from "react";
 import { DONG_MAP } from "@/lib/mockData";
 
+// 채팅 메시지 한 건의 타입 정의
+// sender: "bot"(AI) 또는 "user"(사람)
+// content: 텍스트 외에 JSX도 담을 수 있도록 ReactNode 사용
 interface ChatMessage {
   id: number;
   sender: "bot" | "user";
   content: React.ReactNode;
 }
 
+// 메시지 고유 ID를 컴포넌트 외부에서 관리 (리렌더링 시에도 값이 초기화되지 않음)
 let messageId = 0;
 
+// district: 상위 컴포넌트(대시보드)에서 선택된 자치구명을 props로 받음
 export default function Chatbot({ district }: { district: string }) {
+  // 챗봇 창 열림/닫힘 상태
   const [isOpen, setIsOpen] = useState(false);
+  // 현재 보여줄 화면: "setup"(행정동 선택) | "chat"(대화 화면)
   const [screen, setScreen] = useState<"setup" | "chat">("setup");
+  // 선택된 행정동
   const [dong, setDong] = useState("");
+  // 채팅 메시지 목록
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  // 텍스트 입력창 값
   const [inputValue, setInputValue] = useState("");
+  // 메시지 목록 맨 아래 빈 div를 가리키는 ref (자동 스크롤용)
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  // 챗봇 오버레이(창 전체)를 가리키는 ref (드래그 이동용)
+  const overlayRef = useRef<HTMLDivElement>(null);
 
+  // 선택한 자치구에 속한 행정동 목록 (없으면 빈 배열)
   const dongOptions = DONG_MAP[district] ?? [];
 
+  // [자치구 변경 감지] district prop이 바뀌면 행정동 선택을 초기화
   useEffect(() => {
-    // 자치구가 바뀌면(대시보드 헤더에서 변경) 행정동 선택을 초기화한다.
     setDong("");
   }, [district]);
 
+  // [자동 스크롤] 새 메시지가 추가될 때마다 스크롤을 맨 아래로 이동
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // [키보드 단축키] ESC 키를 누르면 챗봇 창을 닫음
+  // 컴포넌트 마운트 시 1회 등록, 언마운트 시 제거(cleanup)
   useEffect(() => {
     function handleEscape(e: KeyboardEvent) {
       if (e.key === "Escape") setIsOpen(false);
@@ -38,15 +55,81 @@ export default function Chatbot({ district }: { district: string }) {
     return () => document.removeEventListener("keydown", handleEscape);
   }, []);
 
+  // 챗봇 열기: 화면을 setup(행정동 선택)으로 초기화한 뒤 오버레이를 표시
   function openChatbot() {
     setIsOpen(true);
     setScreen("setup");
   }
 
+  // 챗봇 닫기
   function closeChatbot() {
     setIsOpen(false);
   }
 
+  // [드래그 이동] 챗봇이 열릴 때(isOpen=true)마다 헤더를 잡아 창을 드래그할 수 있게 설정
+  // isOpen이 false가 되거나 컴포넌트가 언마운트될 때 cleanup으로 리스너를 모두 제거
+  useEffect(() => {
+    if (!isOpen) return;
+    const overlay = overlayRef.current;
+    if (!overlay) return;
+
+    // 드래그 시작 시점의 포인터 좌표 및 오버레이 위치를 저장하는 변수
+    let startX = 0, startY = 0, startLeft = 0, startTop = 0;
+
+    // pointermove: 드래그 중 오버레이 위치를 계산해서 이동
+    // Math.min/max로 화면 밖으로 벗어나지 않도록 경계 처리
+    const moveChatbot = (e: PointerEvent) => {
+      const nextLeft = startLeft + e.clientX - startX;
+      const nextTop = startTop + e.clientY - startY;
+      overlay.style.left = `${Math.min(Math.max(nextLeft, 0), window.innerWidth - overlay.offsetWidth)}px`;
+      overlay.style.top = `${Math.min(Math.max(nextTop, 0), window.innerHeight - overlay.offsetHeight)}px`;
+    };
+
+    // pointerup: 드래그 종료 시 "dragging" 클래스를 제거하고 이벤트 리스너 해제
+    const stopDrag = () => {
+      overlay.classList.remove("dragging");
+      document.removeEventListener("pointermove", moveChatbot);
+      document.removeEventListener("pointerup", stopDrag);
+    };
+
+    // pointerdown: 드래그 시작
+    // 버튼·입력창·링크 등 인터랙티브 요소를 클릭한 경우에는 드래그를 무시
+    const startDrag = (e: Event) => {
+      const pe = e as PointerEvent;
+      if (pe.target && (pe.target as Element).closest("button, input, select, textarea, a")) return;
+
+      // 현재 오버레이의 화면상 위치를 기준점으로 저장
+      const rect = overlay.getBoundingClientRect();
+      startX = pe.clientX;
+      startY = pe.clientY;
+      startLeft = rect.left;
+      startTop = rect.top;
+
+      // CSS right/bottom 속성 대신 left/top으로 위치를 제어하도록 전환
+      overlay.style.left = `${rect.left}px`;
+      overlay.style.top = `${rect.top}px`;
+      overlay.style.right = "auto";
+      overlay.style.bottom = "auto";
+      overlay.classList.add("dragging");
+
+      document.addEventListener("pointermove", moveChatbot);
+      document.addEventListener("pointerup", stopDrag);
+    };
+
+    // setup/chat 두 화면 모두 ".chatbot-header"가 존재하므로 querySelectorAll로 모두 선택
+    const headers = overlay.querySelectorAll<HTMLElement>(".chatbot-header");
+    headers.forEach((h) => h.addEventListener("pointerdown", startDrag));
+
+    // cleanup: isOpen이 false로 바뀌거나 컴포넌트 언마운트 시 모든 리스너 제거
+    return () => {
+      headers.forEach((h) => h.removeEventListener("pointerdown", startDrag));
+      document.removeEventListener("pointermove", moveChatbot);
+      document.removeEventListener("pointerup", stopDrag);
+    };
+  }, [isOpen]);
+
+  // 채팅 시작: 선택된 행정동이 있을 때만 동작
+  // 봇의 첫 인사 메시지를 삽입하고 chat 화면으로 전환
   function startChat() {
     if (!dong) return;
 
@@ -75,6 +158,8 @@ export default function Chatbot({ district }: { district: string }) {
     setScreen("chat");
   }
 
+  // 메시지 전송: 입력창이 비어 있으면 무시
+  // 사용자 메시지를 즉시 추가하고, 500ms 후 봇의 임시 응답을 추가 (Phase 2 전까지 더미 응답)
   function sendMessage() {
     const text = inputValue.trim();
     if (!text) return;
@@ -104,13 +189,17 @@ export default function Chatbot({ district }: { district: string }) {
 
   return (
     <>
+      {/* FAB(Floating Action Button): 화면 우하단 고정 버튼으로 챗봇을 열기 */}
       <button className="chatbot-fab" type="button" aria-label="AI 챗봇 열기" onClick={openChatbot}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
         </svg>
       </button>
 
-      <div className={`chatbot-overlay ${isOpen ? "active" : ""}`} aria-hidden={!isOpen}>
+      {/* 챗봇 오버레이: isOpen일 때 "active" 클래스로 표시, ref로 드래그 위치 제어 */}
+      <div ref={overlayRef} className={`chatbot-overlay ${isOpen ? "active" : ""}`} aria-hidden={!isOpen}>
+
+        {/* setup 화면: 행정동 선택 */}
         {screen === "setup" ? (
           <div id="setup-screen">
             <header className="chatbot-header">
@@ -128,10 +217,12 @@ export default function Chatbot({ district }: { district: string }) {
               </div>
 
               <div className="chatbot-setup-card">
+                {/* 상위에서 선택된 자치구명 표시 (읽기 전용 배지) */}
                 <div className="chatbot-setup-field">
                   <div className="chatbot-district-badge">{district}</div>
                 </div>
 
+                {/* 해당 자치구의 행정동 목록을 드롭다운으로 표시 */}
                 <div className="chatbot-setup-field">
                   <select
                     className="chatbot-dong-select"
@@ -148,12 +239,16 @@ export default function Chatbot({ district }: { district: string }) {
                 </div>
               </div>
 
+              {/* 행정동 미선택 시 버튼 비활성화 */}
               <button className="chatbot-start-btn" type="button" disabled={!dong} onClick={startChat}>
                 채팅 시작하기
               </button>
             </div>
           </div>
+
         ) : (
+
+          /* chat 화면: 메시지 목록 + 입력창 */
           <div className="chatbot-chat">
             <header className="chatbot-header">
               <button className="chatbot-back-btn" type="button" onClick={() => setScreen("setup")}>
@@ -170,6 +265,7 @@ export default function Chatbot({ district }: { district: string }) {
               </button>
             </header>
 
+            {/* 메시지 목록: user/bot 여부에 따라 말풍선 정렬이 달라짐 */}
             <div className="chat-messages">
               {messages.map((m) => (
                 <div key={m.id} className={`chat-msg-wrap ${m.sender === "user" ? "user" : ""}`}>
@@ -177,9 +273,11 @@ export default function Chatbot({ district }: { district: string }) {
                   <div className={`chat-bubble ${m.sender}`}>{m.content}</div>
                 </div>
               ))}
+              {/* 자동 스크롤 앵커: 새 메시지 추가 시 이 요소로 스크롤 이동 */}
               <div ref={messagesEndRef} />
             </div>
 
+            {/* 입력창: Enter 키 또는 전송 버튼으로 메시지 전송 */}
             <div className="chat-input-area">
               <input
                 className="chat-input"
