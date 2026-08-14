@@ -7,8 +7,8 @@ import { setOnboardingSelection } from "@/store/filtersSlice";
 import { DISTRICTS, SERVICES, TIME_SLOTS, AGE_GROUPS } from "@/lib/mockData";
 
 export default function OnboardingForm() {
-  const router = useRouter(); // Client Components 내 프로그래밍 방식으로 라우트 변경
-  const dispatch = useAppDispatch();
+  const router = useRouter(); // useRouter() : Client Components 내 프로그래밍 방식으로 라우트 변경
+  const dispatch = useAppDispatch(); // useAppDispatch() : Redux store에 action을 보내기 위한 용도
   
   // useState() : 상태 및 생명주기 관리 기능
   const [districtName, setDistrictName] = useState(""); // 자치구명 (백엔드-DB에 필터링 기준으로 활용 예정)
@@ -16,7 +16,7 @@ export default function OnboardingForm() {
   const [timeSlot, setTimeSlot] = useState(""); // 선택한 시간대 (해당 시간대의 추정매출액이나 매출건수와 연결될 예정)
   const [ageGroup, setAgeGroup] = useState(""); // 선택한 연령대 (해당 연령대의 추정매출액이나 매출건수로 연결될 예정)
 
-  const canSubmit = districtName !== "" && serviceCode !== ""; 
+  const canSubmit = districtName !== "" && serviceCode !== ""; // 자치구명, 업종코드를 모두 입력했을 때 true
 
   function handleSubmit() {
     if (!canSubmit) return; // 자치구명, 업종코드 미선택시 제출이 안됨

@@ -1,18 +1,18 @@
-// Placeholder/demo data only. Real values will come from the FastAPI
-// backend once the analytics endpoints are implemented (Phase 1 API work).
-
+// 자치구(서울시 25개구) => 프런트 고정값
 export const DISTRICTS: string[] = [
   "강남구", "강동구", "강북구", "강서구", "관악구", "광진구", "구로구", "금천구",
   "노원구", "도봉구", "동대문구", "동작구", "마포구", "서대문구", "서초구", "성동구",
   "성북구", "송파구", "양천구", "영등포구", "용산구", "은평구", "종로구", "중구", "중랑구",
 ];
 
+// 업종 (항후 필터링된 자치구, 행정동에 있는 업종을 DB에서 가져오는 로직 구현 예정)
 export const SERVICES = [
   { code: "CS100001", name: "한식음식점" },
   { code: "CS100002", name: "카페" },
   { code: "CS100003", name: "일반의류" },
 ] as const;
 
+// 시간대 => 프런트 고정값
 export const TIME_SLOTS = [
   { code: "t0006", label: "00-06시" },
   { code: "t0611", label: "06-11시" },
@@ -22,6 +22,7 @@ export const TIME_SLOTS = [
   { code: "t2124", label: "21-24시" },
 ] as const;
 
+// 연령대 => 프런트 고정값
 export const AGE_GROUPS = [
   { code: "age10", label: "10대" },
   { code: "age20", label: "20대" },
@@ -31,8 +32,11 @@ export const AGE_GROUPS = [
   { code: "age60p", label: "60대 이상" },
 ] as const;
 
-export const QUARTERS = ["2025 Q4", "2026 Q1"] as const;
+ // 분기(추후 데이터 업데이트 시 분기 추가 예정임) => 프런트 고정값
+export const QUARTERS = ["2026 Q1"] as const;
 
+// 사이드바 TOP5 업종 순위매길 때 기준 (4가지-분기별, 요일별, 시간대별, 연령대별)
+// 분기별(quarter), 요일별(weekday), 시간대별(time), 연령대별(age)
 export type RankingBasis = "quarter" | "weekday" | "time" | "age";
 
 export const RANKING_BASIS_TABS: { key: RankingBasis; label: string; anchor: string }[] = [
@@ -42,8 +46,10 @@ export const RANKING_BASIS_TABS: { key: RankingBasis; label: string; anchor: str
   { key: "age", label: "연령대별", anchor: "age" },
 ];
 
+// TOP5 업종의 위험 수준 (위험-보통-양호)
 export type RiskLevel = "risk" | "warn" | "good";
 
+// 대시보드의 TOP5 업종 인사이트 카드/모달/적정성 메시지에서 사용할 데이터 구조를 정의
 export interface ServiceInsight {
   name: string;
   level: RiskLevel;
@@ -57,7 +63,7 @@ export interface ServiceInsight {
   message: string;
 }
 
-// Ranked TOP5 업종 for the currently selected district/quarter (demo values).
+// TOP5_인사이트 (여기 데이터들은 향후 백엔드로 가져올 예정)
 export const TOP5_INSIGHTS: ServiceInsight[] = [
   {
     name: "한식음식점",
@@ -136,8 +142,10 @@ export const TOP5_INSIGHTS: ServiceInsight[] = [
   },
 ];
 
+// 총 추정 매출액 (향후 백엔드로 가져올 예정)
 export const TOTAL_SALES_LABEL = "6,670억";
 
+// 요일별 매출분포  (pct는 향후 백엔드로 가져올 예정)
 export const WEEKDAY_SALES = [
   { key: "mon", label: "월", pct: 72 },
   { key: "tue", label: "화", pct: 82 },
@@ -148,6 +156,7 @@ export const WEEKDAY_SALES = [
   { key: "sun", label: "일", pct: 44 },
 ];
 
+// 시간대별 매출분포 (pct는 향후 백엔드로 가져올 예정)
 export const TIME_DISTRIBUTION: { code: string; label: string; pct: number; color: string }[] = [
   { code: "t0006", label: "00-06시", pct: 3, color: "#2354d9" },
   { code: "t0611", label: "06-11시", pct: 12, color: "#2f68ed" },
@@ -157,6 +166,7 @@ export const TIME_DISTRIBUTION: { code: string; label: string; pct: number; colo
   { code: "t2124", label: "21-24시", pct: 14, color: "#c4defb" },
 ];
 
+// 연령대별 매출분포(pct는 향후 백엔드로 가져올 예정)
 export const AGE_DISTRIBUTION: { code: string; label: string; pct: number; color: string }[] = [
   { code: "age10", label: "10대", pct: 4, color: "#2354d9" },
   { code: "age20", label: "20대", pct: 18, color: "#2867e6" },
@@ -166,6 +176,7 @@ export const AGE_DISTRIBUTION: { code: string; label: string; pct: number; color
   { code: "age60p", label: "60대+", pct: 13, color: "#bfdbfe" },
 ];
 
+// 자치구별 행정동 (행정동 필터링, 행정동 기준으로 백엔드로 행정동 가져올 예정)
 export const DONG_MAP: Record<string, string[]> = {
   강남구: ["개포1동", "개포4동", "논현1동", "논현2동", "대치1동", "대치2동", "대치4동", "도곡1동", "도곡2동", "삼성1동", "삼성2동", "세곡동", "신사동", "압구정동", "역삼1동", "역삼2동", "일원1동", "일원본동", "자곡동", "청담동"],
   강동구: ["강일동", "고덕1동", "고덕2동", "길동", "둔촌1동", "둔촌2동", "명일1동", "명일2동", "상일동", "성내1동", "성내2동", "성내3동", "암사1동", "암사2동", "암사3동", "천호1동", "천호2동", "천호3동"],
@@ -194,22 +205,29 @@ export const DONG_MAP: Record<string, string[]> = {
   중랑구: ["면목본동", "면목2동", "면목3.8동", "면목4동", "면목5동", "면목7동", "망우본동", "망우3동", "묵1동", "묵2동", "상봉1동", "상봉2동", "신내1동", "신내2동", "중화1동", "중화2동"],
 };
 
+// 시간대 코드(t0006 등)를 받아 TIME_SLOTS에서 화면 표시용 시간대 정보를 찾는다.
+// 선택값이 없거나 존재하지 않는 코드면 null을 반환한다.
 export function findTimeSlotByCode(code: string | null) {
   return TIME_SLOTS.find((t) => t.code === code) ?? null;
 }
 
+// 연령대 코드(age20 등)를 받아 AGE_GROUPS에서 화면 표시용 연령대 정보를 찾는다.
+// 선택값이 없거나 존재하지 않는 코드면 null을 반환한다.
 export function findAgeGroupByCode(code: string | null) {
   return AGE_GROUPS.find((a) => a.code === code) ?? null;
 }
 
 // Onboarding 업종 코드는 TOP5 인사이트 목록과 이름 체계가 달라(예: 카페 ↔ 커피·음료)
 // 적정성 메시지 계산 시 이 매핑으로 연결한다.
+// 향후 TB_SERVICE에서 가져올 것
 export const SERVICE_CODE_TO_INSIGHT_NAME: Record<string, string> = {
   CS100001: "한식음식점",
   CS100002: "커피·음료",
   CS100003: "일반의류",
 };
 
+// 온보딩에서 선택한 업종 코드(CS100001 등)를 TOP5 인사이트 데이터와 연결한다.
+// 업종 코드명과 TOP5 표시명이 다를 수 있어 SERVICE_CODE_TO_INSIGHT_NAME 매핑을 거쳐 찾는다.
 export function findInsightByServiceCode(code: string | null) {
   if (!code) return null;
   const name = SERVICE_CODE_TO_INSIGHT_NAME[code];
@@ -223,6 +241,8 @@ export interface RankedShare {
   total: number;
 }
 
+// 선택한 시간대 코드가 전체 시간대 매출 비중 중 몇 위인지 계산한다.
+// pct가 높은 순서로 정렬한 뒤 rank, pct, label, 전체 개수를 반환한다.
 export function rankTimeSlot(code: string | null): RankedShare | null {
   if (!code) return null;
   const sorted = [...TIME_DISTRIBUTION].sort((a, b) => b.pct - a.pct);
@@ -231,6 +251,8 @@ export function rankTimeSlot(code: string | null): RankedShare | null {
   return { label: sorted[idx].label, pct: sorted[idx].pct, rank: idx + 1, total: sorted.length };
 }
 
+// 선택한 연령대 코드가 전체 연령대 매출 비중 중 몇 위인지 계산한다.
+// pct가 높은 순서로 정렬한 뒤 rank, pct, label, 전체 개수를 반환한다.
 export function rankAgeGroup(code: string | null): RankedShare | null {
   if (!code) return null;
   const sorted = [...AGE_DISTRIBUTION].sort((a, b) => b.pct - a.pct);

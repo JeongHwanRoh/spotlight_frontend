@@ -15,8 +15,8 @@ interface ChatMessage {
 // 메시지 고유 ID를 컴포넌트 외부에서 관리 (리렌더링 시에도 값이 초기화되지 않음)
 let messageId = 0;
 
-// district: 상위 컴포넌트(대시보드)에서 선택된 자치구명을 props로 받음
-export default function Chatbot({ district }: { district: string }) {
+// district, dongName: 상위 컴포넌트(대시보드)에서 선택된 자치구명/행정동명을 props로 받음
+export default function Chatbot({ district, dongName }: { district: string; dongName: string }) {
   // 챗봇 창 열림/닫힘 상태
   const [isOpen, setIsOpen] = useState(false);
   // 현재 보여줄 화면: "setup"(행정동 선택) | "chat"(대화 화면)
@@ -34,11 +34,35 @@ export default function Chatbot({ district }: { district: string }) {
 
   // 선택한 자치구에 속한 행정동 목록 (없으면 빈 배열)
   const dongOptions = DONG_MAP[district] ?? [];
+  
+  // welcome message 내용 (첫 메시지)
+  function createWelcomeMessage(selectedDong: string): ChatMessage {
+    return {
+      id: messageId++,
+      sender: "bot",
+      content: (
+        <>
+          <span className="phase-chip">AI 상권 챗봇</span>
+          <br />
+          {`"${selectedDong} 카페 창업 어때요?"`}
+          <br />
+          <br />
+          안녕하세요! <strong>{district} {selectedDong}</strong> 지역 상권 분석 AI입니다. 창업 예정 업종, 타겟 고객,
+          경쟁 현황 등 궁금한 점을 자유롭게 물어보세요.
+          <br />
+          <br />
+          <span className="chat-hint">
+            ※ 현재 UI 템플릿 단계입니다. 실제 답변은 LangGraph + 벡터DB + 파인튜닝 모델 연동 후 제공됩니다.
+          </span>
+        </>
+      ),
+    };
+  }
 
-  // [자치구 변경 감지] district prop이 바뀌면 행정동 선택을 초기화
+  // [자치구/행정동 변경 감지] 대시보드에서 선택한 행정동이 있으면 챗봇 내부 선택값에 반영
   useEffect(() => {
-    setDong("");
-  }, [district]);
+    setDong(dongName);
+  }, [district, dongName]);
 
   // [자동 스크롤] 새 메시지가 추가될 때마다 스크롤을 맨 아래로 이동
   useEffect(() => {
@@ -57,8 +81,13 @@ export default function Chatbot({ district }: { district: string }) {
 
   // 챗봇 열기: 화면을 setup(행정동 선택)으로 초기화한 뒤 오버레이를 표시
   function openChatbot() {
-    setIsOpen(true);
-    setScreen("setup");
+    const hasDashboardDong = dongName !== ""; // 동이 선택된 상태인지 여부 (동 있으면 true, 없으면 false)
+    const nextDong = hasDashboardDong ? dongName : ""; // 동이 선택된 상태이면 nextDong에 해당 동 저장, 아니면 빈 값 리턴 
+
+    setIsOpen(true); // 채팅창 open
+    setDong(nextDong); // 대시보드에서 선택된 동이 nextDong에 저장되고 해당 변수가 dong 변수에 저장됨
+    setScreen(hasDashboardDong ? "chat" : "setup"); // 동 선택된 상태면 chat 모드로, 아니면 setup 모드로
+    setMessages(hasDashboardDong ? [createWelcomeMessage(nextDong)] : []); // 동 선택된 상태면 바로 welcome message 띄우기
   }
 
   // 챗봇 닫기
@@ -133,28 +162,7 @@ export default function Chatbot({ district }: { district: string }) {
   function startChat() {
     if (!dong) return;
 
-    setMessages([
-      {
-        id: messageId++,
-        sender: "bot",
-        content: (
-          <>
-            <span className="phase-chip">AI 상권 챗봇</span>
-            <br />
-            {`"${dong} 카페 창업 어때요?"`}
-            <br />
-            <br />
-            안녕하세요! <strong>{district} {dong}</strong> 지역 상권 분석 AI입니다. 창업 예정 업종, 타겟 고객,
-            경쟁 현황 등 궁금한 점을 자유롭게 물어보세요.
-            <br />
-            <br />
-            <span className="chat-hint">
-              ※ 현재 UI 템플릿 단계입니다. 실제 답변은 LangGraph + 벡터DB + 파인튜닝 모델 연동 후 제공됩니다.
-            </span>
-          </>
-        ),
-      },
-    ]);
+    setMessages([createWelcomeMessage(dong)]);
     setScreen("chat");
   }
 
@@ -248,7 +256,8 @@ export default function Chatbot({ district }: { district: string }) {
 
         ) : (
 
-          /* chat 화면: 메시지 목록 + 입력창 */
+          /*  screen != "setup"인 경우 => screen =="chat"
+          chat 화면: 메시지 목록 + 입력창 */
           <div className="chatbot-chat">
             <header className="chatbot-header">
               <button className="chatbot-back-btn" type="button" onClick={() => setScreen("setup")}>
