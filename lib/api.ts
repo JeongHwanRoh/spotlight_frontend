@@ -11,10 +11,12 @@ export const api = axios.create({
 
 export interface HealthResponse {
   status: string;
-  service: string;
+  db_connection: string;
+  result: number;
 }
 
 export async function checkBackendHealth(): Promise<HealthResponse> {
   const res = await api.get<HealthResponse>("/api/health");
   return res.data;
 }
+
