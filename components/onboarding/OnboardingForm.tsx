@@ -21,6 +21,8 @@ export default function OnboardingForm() {
   function handleSubmit() {
     if (!canSubmit) return; // 자치구명, 업종코드 미선택시 제출이 안됨
 
+    // setOnboardingSelection: "이 값으로 필터 상태를 바꿔달라" 라는 action을 만드는 역할
+    // dispatch: 해당 action을 Redux store로 보냄.
     dispatch(
       setOnboardingSelection({
         districtName,
