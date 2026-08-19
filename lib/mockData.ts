@@ -239,9 +239,6 @@ export const TOP5_INSIGHTS: ServiceInsight[] = [
   },
 ];
 
-// 총 추정 매출액 (향후 백엔드로 가져올 예정)
-export const TOTAL_SALES_LABEL = "6,670억";
-
 // 요일별 매출분포  (pct는 향후 백엔드로 가져올 예정)
 export const WEEKDAY_SALES = [
   { key: "mon", label: "월", pct: 72 },

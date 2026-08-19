@@ -37,10 +37,10 @@ export default function HealthCheckTest() {
   }
 
   return (
-    <div style={{ padding: "16px", border: "1px solid green" }}>
+    <div style={{ color: "black" , padding: "16px", border: "1px solid green" }}>
       <h3>✅ 통신 및 DB 연결 성공</h3>
       <ul>
-        <li><strong>API Status:</strong> {health?.status}</li>
+        <li><strong >API Status:</strong> {health?.status}</li>
         <li><strong>DB Connection:</strong> {health?.db_connection}</li>
         <li><strong>DB Query Result:</strong> {health?.result}</li>
       </ul>

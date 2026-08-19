@@ -1,12 +1,13 @@
 "use client";
 
-import { RANKING_BASIS_TABS, TOP5_INSIGHTS, TOTAL_SALES_LABEL, type RankingBasis } from "@/lib/mockData";
+import { RANKING_BASIS_TABS, TOP5_INSIGHTS, type RankingBasis } from "@/lib/mockData";
 
 const LEVEL_LABEL: Record<string, string> = { risk: "위험", warn: "보통", good: "양호" };
 
 interface SidebarProps {
   district: string;
   quarter: string;
+  totalSalesLabel: string;
   rankingBasis: RankingBasis;
   onRankingBasisChange: (basis: RankingBasis) => void;
   onOpenInsight: (index: number) => void;
@@ -15,6 +16,7 @@ interface SidebarProps {
 export default function Sidebar({
   district,
   quarter,
+  totalSalesLabel,
   rankingBasis,
   onRankingBasisChange,
   onOpenInsight,
@@ -24,8 +26,7 @@ export default function Sidebar({
   return (
     <aside className="sidebar">
       <section className="summary-card">
-        <span>총 추정매출액</span>
-        <strong>{TOTAL_SALES_LABEL}</strong>
+        <strong>{totalSalesLabel}</strong>
         <p>
           {district} · {quarter}
         </p>
