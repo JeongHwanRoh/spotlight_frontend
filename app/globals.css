@@ -294,7 +294,9 @@ textarea {
 
 .summary-card {
   min-height: 85px;
+  min-width: 0;
   padding: 11px 13px;
+  overflow: hidden;
   border-radius: 7px;
   background: var(--panel-deep);
 }
@@ -307,15 +309,23 @@ textarea {
 
 .summary-card strong {
   display: block;
+  max-width: 100%;
   margin: 4px 0 2px;
+  overflow: hidden;
   color: var(--blue-soft);
-  font-size: 22px;
+  font-size: clamp(16px, 1.45vw, 22px);
   font-weight: 500;
   line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .summary-card p {
+  max-width: 100%;
   margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .metric-tabs {

@@ -15,6 +15,7 @@ import SuitabilityPanel from "./SuitabilityPanel";
 import InsightModal from "./InsightModal";
 import Chatbot from "@/components/chatbot/Chatbot";
 
+
 export default function DashboardClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -126,12 +127,18 @@ export default function DashboardClient() {
         quarter: toQuarterCode(filters.quarter),
       });
       // 화면에 표시할 문자열로 저장
-      setTotalSalesLabel(`${data.totalSales.toLocaleString()}원`);
+      setTotalSalesLabel(formatSalesToEok(data.totalSales));
 
     } catch (error) {
       console.error("총 추정매출액 조회 실패", error);
     }
   }
+
+  // 총 추정매출액 화면조회 단위를 억단위로 끊기 (소수 첫째자리까지)
+  function formatSalesToEok(totalSales: number) {
+    return `${Number((totalSales / 100000000).toFixed(1)).toLocaleString()}억원`;
+  }
+
   // '2026 Q1' -> 20261 숫자로 변환
   function toQuarterCode(quarter: string): number {
     const match = quarter.match(/^(\d{4})\s*Q([1-4])$/);
