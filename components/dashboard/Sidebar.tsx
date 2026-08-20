@@ -52,7 +52,10 @@ export default function Sidebar({
   const activeTab = RANKING_BASIS_TABS.find((t) => t.key === rankingBasis) ?? RANKING_BASIS_TABS[0];
   const rankingTitleLabel = formatSelectedRankingLabel(rankingBasis, timeSlot, ageGroup) ?? activeTab.label;
 
-  
+  // onboarding 화면으로 돌아가기
+  function goBackToOnboardingPage() {
+    router.push("/onboarding");
+  }
   // timeSlot(시간대) 또는 ageGroup(연령대)가 null일 경우 업종 순위 출력 안되게 alert 처리
   function handleRankingTabClick(basis: RankingBasis) {
     if (basis == "time" && !timeSlot) {
@@ -121,6 +124,9 @@ export default function Sidebar({
           ))}
         </ol>
       </section>
+      <button type="button" className="back-action" onClick={() => goBackToOnboardingPage()}>
+        <p>돌아가기</p>
+      </button>
     </aside>
   );
 }
