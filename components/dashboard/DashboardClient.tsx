@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { hydrateFromParams, setDistrict, setDong, setQuarter, setRankingBasis } from "@/store/filtersSlice";
-import { RANKING_BASIS_TABS, TIME_DISTRIBUTION, AGE_DISTRIBUTION, TOP5_INSIGHTS, type RankingBasis } from "@/lib/mockData";
-import { getDashboardTotalSales } from "@/lib/dashboardApi";
+import { RANKING_BASIS_TABS, TIME_DISTRIBUTION, AGE_DISTRIBUTION, TOP5_INSIGHTS, type RankingBasis, type ServiceSalesRank } from "@/lib/mockData";
+import { getDashboardServiceSalesRank, getDashboardTotalSales, type DashboardServiceSalesRankItem } from "@/lib/dashboardApi";
 import Topbar from "./Topbar";
 import Sidebar from "./Sidebar";
 import BarChartPanel from "./BarChartPanel";
@@ -29,7 +29,9 @@ export default function DashboardClient() {
   const [openInsightIndex, setOpenInsightIndex] = useState<number | null>(null);
   // 분기별 총 추정 매출액
   const [totalSalesLabel, setTotalSalesLabel] = useState("-");
-
+  // 총 추정매출액 TOP5 업종 목록
+  const [top5ServiceSales, setTop5ServiceSales] = useState<ServiceSalesRank[]>([]);
+ 
 
   /* 
   useEffect 부분: 리액트 컴포넌트가 화면에 렌더링된 후 API, DOM, 타이머 등 외부 시스템과 동기화할 때 사용
@@ -78,6 +80,15 @@ export default function DashboardClient() {
     // 분기별 총 추정매출액 조회 요청 함수 호출
     fetchTotalSales();
   }, [hydrated, filters.districtName, filters.dongName, filters.quarter]);
+
+  // 대시보드 TOP5 업종 매출 순위 가져오기(바차트용)
+  useEffect(() => {
+    // 아직 URL 복원이 안끝났거나, 자치구가 없으면 조회하지 않음
+    if (!hydrated || !filters.districtName) return;
+
+    fetchServiceSalesRank();
+  }, [hydrated, filters.districtName, filters.dongName, filters.quarter]);
+
 
   /* 
     주요 함수 부분
@@ -134,12 +145,45 @@ export default function DashboardClient() {
     }
   }
 
+  // 백엔드에 총 추정매출액 TOP5 업종 조회 요청 함수
+  // 순서: TOP5 업종 가져오는 API 요청및응답  -> 바차트 표시용 데이터 변환 -> 총 추정매출액 TOP5 업종 목록 상태 변환 -> 바차트에 표시
+  async function fetchServiceSalesRank() {
+    if (!filters.districtName) return;
+
+    try {
+      const data = await getDashboardServiceSalesRank({
+        districtName: filters.districtName,
+        dongName: filters.dongName || null,
+        quarter: toQuarterCode(filters.quarter)
+
+      });
+
+      setTop5ServiceSales(toServiceSalesRanks(data.serviceSalesRanks));
+    } catch (error) {
+      console.error("총 추정매출액 TOP5 업종 조회 실패", error)
+    }
+
+  }
+
+  // 백엔드 응답을 바차트 표시용 데이터로 변환
+  function toServiceSalesRanks(items: DashboardServiceSalesRankItem[]): ServiceSalesRank[] {
+    const maxSalesAmount = Math.max(...items.map((item) => item.salesAmount), 0);
+
+    return items.map((item) => ({
+      serviceCode: item.serviceCode,
+      serviceName: item.serviceName,
+      salesAmount: item.salesAmount,
+      salesLabel: formatSalesToEok01(item.salesAmount),
+      barHeightPct: maxSalesAmount > 0 ? Math.max(Math.round((item.salesAmount / maxSalesAmount) * 100), 8) : 0, // 바차트 높이 비율(계산1위가 100이라고 가정)
+    }));
+  }
+
   // 총 추정매출액 화면조회 단위를 억단위로 끊기 (소수 첫째자리까지)
   function formatSalesToEok01(totalSales: number) {
     return `${Number((totalSales / 100000000).toFixed(1)).toLocaleString()}억원`;
   }
 
-    // 총 추정매출액 화면조회 단위를 억단위로 끊기 (소수 둘째자리까지)
+  // 총 추정매출액 화면조회 단위를 억단위로 끊기 (소수 둘째자리까지)
   function formatSalesToEok02(totalSales: number) {
     return `${Number((totalSales / 100000000).toFixed(2)).toLocaleString()}억원`;
   }
@@ -197,7 +241,12 @@ export default function DashboardClient() {
 
         <div className="main-column">
           <section className="content-grid">
-            <BarChartPanel />
+            <BarChartPanel
+              district={filters.districtName}
+              dong={filters.dongName ?? ""}
+              quarter={filters.quarter}
+              serviceSalesRanks={top5ServiceSales}
+            />
             <LineChartPanel />
             <DonutPanel id="time" title="시간대별 매출분포" centerLabel="시간대별" data={TIME_DISTRIBUTION} />
             <DonutPanel id="age" title="연령대별 매출분포" centerLabel="연령대" data={AGE_DISTRIBUTION} />

@@ -95,6 +95,15 @@ export const AGE_GROUPS = [
  // 분기(추후 데이터 업데이트 시 분기 추가 예정임) => 프런트 고정값
 export const QUARTERS = ["2026 Q1"] as const;
 
+// 대시보드의 TOP5 업종 매출 순위 바차트에서 사용할 데이터 구조
+export interface ServiceSalesRank {
+  serviceCode: string;
+  serviceName: string;
+  salesAmount: number;
+  salesLabel: string;
+  barHeightPct: number;
+
+} 
 // 사이드바 TOP5 업종 순위매길 때 기준 (4가지-분기별, 요일별, 시간대별, 연령대별)
 // 분기별(quarter), 요일별(weekday), 시간대별(time), 연령대별(age)
 export type RankingBasis = "quarter" | "weekday" | "time" | "age";
