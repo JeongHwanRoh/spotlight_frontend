@@ -153,7 +153,7 @@ export default function DashboardClient() {
     return Number(`${match[1]}${match[2]}`);
   }
 
-  // 사이드바 랭킹 기준을 바꾸고, 해당 차트 섹션으로 스크롤하는 함수
+  // 사이드바 랭킹 기준을 바꾸고, 해당 차트 섹션으로 스크롤하는 함수(실제 사이드바 상태 변경 부분)
   function handleRankingBasisChange(basis: RankingBasis) {
     dispatch(setRankingBasis(basis));
     const anchor = RANKING_BASIS_TABS.find((t) => t.key === basis)?.anchor;
@@ -184,9 +184,13 @@ export default function DashboardClient() {
       <div className="dashboard-body">
         <Sidebar
           district={filters.districtName}
+          dong={filters.dongName ?? ""}
           quarter={filters.quarter}
           totalSalesLabel={totalSalesLabel}
           rankingBasis={filters.rankingBasis}
+          serviceCode={filters.serviceCode}
+          timeSlot={filters.timeSlot}
+          ageGroup={filters.ageGroup}
           onRankingBasisChange={handleRankingBasisChange}
           onOpenInsight={setOpenInsightIndex}
         />
