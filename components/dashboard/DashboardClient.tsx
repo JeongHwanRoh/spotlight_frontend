@@ -127,7 +127,7 @@ export default function DashboardClient() {
         quarter: toQuarterCode(filters.quarter),
       });
       // 화면에 표시할 문자열로 저장
-      setTotalSalesLabel(formatSalesToEok(data.totalSales));
+      setTotalSalesLabel(formatSalesToEok01(data.totalSales));
 
     } catch (error) {
       console.error("총 추정매출액 조회 실패", error);
@@ -135,8 +135,13 @@ export default function DashboardClient() {
   }
 
   // 총 추정매출액 화면조회 단위를 억단위로 끊기 (소수 첫째자리까지)
-  function formatSalesToEok(totalSales: number) {
+  function formatSalesToEok01(totalSales: number) {
     return `${Number((totalSales / 100000000).toFixed(1)).toLocaleString()}억원`;
+  }
+
+    // 총 추정매출액 화면조회 단위를 억단위로 끊기 (소수 둘째자리까지)
+  function formatSalesToEok02(totalSales: number) {
+    return `${Number((totalSales / 100000000).toFixed(2)).toLocaleString()}억원`;
   }
 
   // '2026 Q1' -> 20261 숫자로 변환

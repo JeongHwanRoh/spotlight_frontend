@@ -37,7 +37,6 @@ export const SERVICES = [
   { code: "CS200032", name: "가전제품수리" },
   { code: "CS200033", name: "부동산중개업" },
   { code: "CS200034", name: "여관" },
-  { code: "CS200036", name: "고시원" },  /* NULL 있음(케바케)*/
   { code: "CS200037", name: "노래방" },
   { code: "CS300001", name: "슈퍼마켓" },
   { code: "CS300002", name: "편의점" },
@@ -102,7 +101,6 @@ export type RankingBasis = "quarter" | "weekday" | "time" | "age";
 
 export const RANKING_BASIS_TABS: { key: RankingBasis; label: string; anchor: string }[] = [
   { key: "quarter", label: "분기별", anchor: "quarter" },
-  { key: "weekday", label: "요일별", anchor: "weekday" },
   { key: "time", label: "시간대별", anchor: "time" },
   { key: "age", label: "연령대별", anchor: "age" },
 ];
