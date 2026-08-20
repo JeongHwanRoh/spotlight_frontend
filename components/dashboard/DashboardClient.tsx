@@ -31,7 +31,7 @@ export default function DashboardClient() {
   const [totalSalesLabel, setTotalSalesLabel] = useState("-");
   // 총 추정매출액 TOP5 업종 목록
   const [top5ServiceSales, setTop5ServiceSales] = useState<ServiceSalesRank[]>([]);
- 
+
 
   /* 
   useEffect 부분: 리액트 컴포넌트가 화면에 렌더링된 후 API, DOM, 타이머 등 외부 시스템과 동기화할 때 사용
@@ -91,9 +91,12 @@ export default function DashboardClient() {
 
 
   /* 
-    주요 함수 부분
+  ==================================================================================  
+  주요 함수 부분
+  ==================================================================================  
   */
 
+  // [1] 행정동/자치구 필터 관련 함수 모음
 
   // 대시보드 필터가 바뀔 때 Redux 상태와 URL 쿼리스트링을 같은 값으로 맞춘다.
   // URL 순서를 districtName -> dongName -> serviceCode -> time -> age로 고정해 공유 가능한 주소를 만든다.
@@ -129,6 +132,29 @@ export default function DashboardClient() {
     dispatch(setQuarter(next));
   }
 
+  // [2] 금액, 문자열 등 포매팅 함수 모음
+
+  // 추정매출액 화면조회 단위를 억단위로 끊기 (소수 첫째자리까지)
+  function formatSalesToEok01(totalSales: number) {
+    return `${Number((totalSales / 100000000).toFixed(1)).toLocaleString()}억원`;
+  }
+
+  // 추정매출액 화면조회 단위를 억단위로 끊기 (소수 둘째자리까지)
+  function formatSalesToEok02(totalSales: number) {
+    return `${Number((totalSales / 100000000).toFixed(2)).toLocaleString()}억원`;
+  }
+
+  // '2026 Q1' -> 20261 숫자로 변환
+  function toQuarterCode(quarter: string): number {
+    const match = quarter.match(/^(\d{4})\s*Q([1-4])$/);
+    if (!match) {
+      throw new Error(`Invalid quarter format: ${quarter}`);
+    }
+    return Number(`${match[1]}${match[2]}`);
+  }
+
+  // [3] 사이드바 분기별 총 추정매출액 조회 관련 함수 모음
+
   // 백엔드에 분기별 총 추정매출액 조회 요청 함수
   async function fetchTotalSales() {
     try {
@@ -144,6 +170,8 @@ export default function DashboardClient() {
       console.error("총 추정매출액 조회 실패", error);
     }
   }
+
+  // [4] 총 추정매출액 TOP5 업종 조회 바차트 관련 함수
 
   // 백엔드에 총 추정매출액 TOP5 업종 조회 요청 함수
   // 순서: TOP5 업종 가져오는 API 요청및응답  -> 바차트 표시용 데이터 변환 -> 총 추정매출액 TOP5 업종 목록 상태 변환 -> 바차트에 표시
@@ -177,25 +205,10 @@ export default function DashboardClient() {
       barHeightPct: maxSalesAmount > 0 ? Math.max(Math.round((item.salesAmount / maxSalesAmount) * 100), 8) : 0, // 바차트 높이 비율(계산1위가 100이라고 가정)
     }));
   }
-
-  // 총 추정매출액 화면조회 단위를 억단위로 끊기 (소수 첫째자리까지)
-  function formatSalesToEok01(totalSales: number) {
-    return `${Number((totalSales / 100000000).toFixed(1)).toLocaleString()}억원`;
-  }
-
-  // 총 추정매출액 화면조회 단위를 억단위로 끊기 (소수 둘째자리까지)
-  function formatSalesToEok02(totalSales: number) {
-    return `${Number((totalSales / 100000000).toFixed(2)).toLocaleString()}억원`;
-  }
-
-  // '2026 Q1' -> 20261 숫자로 변환
-  function toQuarterCode(quarter: string): number {
-    const match = quarter.match(/^(\d{4})\s*Q([1-4])$/);
-    if (!match) {
-      throw new Error(`Invalid quarter format: ${quarter}`);
-    }
-    return Number(`${match[1]}${match[2]}`);
-  }
+  
+  // [5] (아래 이어서 함수 모음 카테고리화하기)
+  
+  // [] 사이드바 랭킹 관련 함수 모음
 
   // 사이드바 랭킹 기준을 바꾸고, 해당 차트 섹션으로 스크롤하는 함수(실제 사이드바 상태 변경 부분)
   function handleRankingBasisChange(basis: RankingBasis) {
@@ -206,13 +219,16 @@ export default function DashboardClient() {
     }
   }
 
+  // 선택된 TOP5 인사이트가 있을 때만 모달에 전달한다.
+  const openInsight = openInsightIndex !== null ? TOP5_INSIGHTS[openInsightIndex] : null;
+
+  // [기타] 기타 함수 및 로직
+
   // URL -> Redux 복원이 끝나기 전이거나 자치구가 없으면 빈 화면을 유지한다.
   if (!hydrated || !filters.districtName) {
     return null;
   }
 
-  // 선택된 TOP5 인사이트가 있을 때만 모달에 전달한다.
-  const openInsight = openInsightIndex !== null ? TOP5_INSIGHTS[openInsightIndex] : null;
 
   return (
     <main className="dashboard-shell">
