@@ -1,5 +1,8 @@
 import { type ServiceSalesRank } from "@/lib/mockData";
+/* 
 
+분기 매출금액 TOP5 업종 바차트
+*/
 interface BarChartProps {
   district: string;
   dong: string | null;

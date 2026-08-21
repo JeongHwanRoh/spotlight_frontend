@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { hydrateFromParams, setDistrict, setDong, setQuarter, setRankingBasis } from "@/store/filtersSlice";
-import { RANKING_BASIS_TABS, TIME_DISTRIBUTION, AGE_DISTRIBUTION, TOP5_INSIGHTS, type RankingBasis, type ServiceSalesRank } from "@/lib/mockData";
-import { getDashboardServiceSalesRank, getDashboardTotalSales, type DashboardServiceSalesRankItem } from "@/lib/dashboardApi";
+import { RANKING_BASIS_TABS, TIME_DISTRIBUTION, AGE_DISTRIBUTION, TOP5_INSIGHTS, type RankingBasis, type ServiceSalesRank, type SalesByDays } from "@/lib/mockData";
+import { getDashboardServiceSalesRank, getDashboardTotalSales, getDashboardWeekdaySales, type DashboardServiceSalesRankItem, type DashboardWeekdaySalesItem } from "@/lib/dashboardApi";
 import Topbar from "./Topbar";
 import Sidebar from "./Sidebar";
 import BarChartPanel from "./BarChartPanel";
@@ -31,7 +31,8 @@ export default function DashboardClient() {
   const [totalSalesLabel, setTotalSalesLabel] = useState("-");
   // 총 추정매출액 TOP5 업종 목록
   const [top5ServiceSales, setTop5ServiceSales] = useState<ServiceSalesRank[]>([]);
-
+  // 요일별 매출액
+  const [weekdaySales, setWeekdaySales] = useState<SalesByDays[]>([]);
 
   /* 
   useEffect 부분: 리액트 컴포넌트가 화면에 렌더링된 후 API, DOM, 타이머 등 외부 시스템과 동기화할 때 사용
@@ -89,6 +90,12 @@ export default function DashboardClient() {
     fetchServiceSalesRank();
   }, [hydrated, filters.districtName, filters.dongName, filters.quarter]);
 
+  // 대시보드 요일별 매출분포 가져오기(라인차트용)
+  useEffect(() => {
+    if (!hydrated || !filters.districtName) return;
+
+    fetchWeekdaySales();
+  }, [hydrated, filters.districtName, filters.dongName, filters.serviceCode, filters.quarter]);
 
   /* 
   ==================================================================================  
@@ -205,9 +212,49 @@ export default function DashboardClient() {
       barHeightPct: maxSalesAmount > 0 ? Math.max(Math.round((item.salesAmount / maxSalesAmount) * 100), 8) : 0, // 바차트 높이 비율(계산1위가 100이라고 가정)
     }));
   }
-  
-  // [5] (아래 이어서 함수 모음 카테고리화하기)
-  
+
+  // [5] 요일별 매출분포 조회 라인차트 관련 함수 모음
+
+  // 백엔드에 요일별 매출분포 조회 요청 함수
+  async function fetchWeekdaySales() {
+    if (!filters.districtName) return;
+
+    try {
+      const data = await getDashboardWeekdaySales({
+        districtName: filters.districtName,
+        dongName: filters.dongName || null,
+        serviceCode: filters.serviceCode,
+        quarter: toQuarterCode(filters.quarter)
+
+      });
+
+      setWeekdaySales(toWeekdaySales(data.weekdaySales));
+    } catch (error) {
+      console.error("요일별 매출분포 조회 실패", error)
+    }
+
+  }
+
+  // 백엔드 응답을 라인차트 표시용 데이터로 변환
+  function toWeekdaySales(item: DashboardWeekdaySalesItem): SalesByDays[] {
+    const values = [
+      { dayCode: "mon", daysLabel: "월", salesAmount: item.monSalesAmount },
+      { dayCode: "tue", daysLabel: "화", salesAmount: item.tueSalesAmount },
+      { dayCode: "wed", daysLabel: "수", salesAmount: item.wedSalesAmount },
+      { dayCode: "thu", daysLabel: "목", salesAmount: item.thuSalesAmount },
+      { dayCode: "fri", daysLabel: "금", salesAmount: item.friSalesAmount },
+      { dayCode: "sat", daysLabel: "토", salesAmount: item.satSalesAmount },
+      { dayCode: "sun", daysLabel: "일", salesAmount: item.sunSalesAmount },
+    ] as const;
+
+    const maxSalesAmount = Math.max(...values.map((item) => item.salesAmount), 0);
+
+    return values.map((item) => ({
+      ...item,
+      salesLabel: formatSalesToEok01(item.salesAmount),
+      pct: maxSalesAmount > 0 ? Math.round((item.salesAmount / maxSalesAmount) * 100) : 0,
+    }));
+  }
   // [] 사이드바 랭킹 관련 함수 모음
 
   // 사이드바 랭킹 기준을 바꾸고, 해당 차트 섹션으로 스크롤하는 함수(실제 사이드바 상태 변경 부분)
@@ -263,7 +310,11 @@ export default function DashboardClient() {
               quarter={filters.quarter}
               serviceSalesRanks={top5ServiceSales}
             />
-            <LineChartPanel />
+            <LineChartPanel weekdaySales={weekdaySales}
+              district={filters.districtName}
+              dong={filters.dongName ?? ""}
+              quarter={filters.quarter}
+              serviceCode={filters.serviceCode} />
             <DonutPanel id="time" title="시간대별 매출분포" centerLabel="시간대별" data={TIME_DISTRIBUTION} />
             <DonutPanel id="age" title="연령대별 매출분포" centerLabel="연령대" data={AGE_DISTRIBUTION} />
           </section>

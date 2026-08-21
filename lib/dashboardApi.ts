@@ -51,3 +51,38 @@ export async function getDashboardServiceSalesRank(
     const res = await api.get<DashboardServiceSalesResponse>("/api/dashboard/topFiveServiceBySales", { params });
     return res.data;
 }
+
+/* 
+[3] 요일별 매출액 분포 추출
+*/
+
+// 3-1. 요일별 매출액 분포 조회 api에 필요한 파라미터
+export interface DashboardWeekdaySalesParams {
+    districtName: string;
+    dongName?: string | null;
+    serviceCode: string | null;
+    quarter: number;
+}
+
+// 3-2. 요일별 매출액 분포 조회 api의 응답 타입(단일 행 형태)
+export interface DashboardWeekdaySalesItem {
+    monSalesAmount: number;
+    tueSalesAmount: number;
+    wedSalesAmount: number;
+    thuSalesAmount: number;
+    friSalesAmount: number;
+    satSalesAmount: number;
+    sunSalesAmount: number;
+}
+
+export interface DashboardWeekdaySalesResponse {
+    weekdaySales: DashboardWeekdaySalesItem;
+}
+
+// 3-3. 요일별 매출액 분포 정보 api 받아오기
+export async function getDashboardWeekdaySales(
+    params: DashboardWeekdaySalesParams
+): Promise<DashboardWeekdaySalesResponse> {
+    const res = await api.get<DashboardWeekdaySalesResponse>("/api/dashboard/weekdaySales", { params });
+    return res.data;
+}

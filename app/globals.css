@@ -48,7 +48,7 @@ textarea {
   overflow: hidden;
 }
 
-.onboarding-page::before{
+.onboarding-page::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -127,13 +127,14 @@ textarea {
   gap: 14px;
   padding: 22px 22px 24px;
 
-.sidebar .back-action span {
-  display: flex;
-  align-items: center;
-  height: 100%;
-  line-height: 1;
-  transform: translateY(-1px);
-}
+  .sidebar .back-action span {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    line-height: 1;
+    transform: translateY(-1px);
+  }
+
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel);
@@ -409,10 +410,12 @@ textarea {
   border-color: var(--blue);
   background: rgba(47, 91, 231, 0.22);
 }
-.ranking-card{
-  padding:20px 0 20px;
+
+.ranking-card {
+  padding: 20px 0 20px;
 
 }
+
 .ranking-card h2 {
   margin: 0 0 10px;
   color: var(--soft);
@@ -703,12 +706,27 @@ textarea {
   white-space: nowrap;
 }
 
+.bar-item span {
+  color: #eaf2ff;
+  -webkit-text-stroke: 3px rgba(15, 23, 42, 0.88);
+  paint-order: stroke fill;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.bar-item span,
+.line-chart .sales-labels text {
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .line-chart {
   display: block;
-  width: 75%;
-  max-width: 660px;
+  width: 100%;
+  max-width: none;
   height: 270px;
-  margin: 18px auto 0;
+  margin: 18px 0 0;
+  overflow: visible;
 }
 
 .line-chart .axis {
@@ -736,8 +754,16 @@ textarea {
 }
 
 .line-chart text {
-  fill: var(--muted);
+  fill: #8fa6c3;
   font-size: 18px;
+}
+
+.line-chart .sales-labels text {
+  fill: #eaf2ff;
+  stroke: rgba(15, 23, 42, 0.88);
+  stroke-width: 3px;
+  paint-order: stroke fill;
+  text-rendering: geometricPrecision;
 }
 
 .donut-card {
@@ -1285,6 +1311,7 @@ textarea {
    RESPONSIVE
 ══════════════════════════════════════════ */
 @media (max-width: 860px) {
+
   .topbar,
   .dashboard-body {
     display: block;
