@@ -2,8 +2,9 @@ import {
   findInsightByServiceCode,
   findTimeSlotByCode,
   findAgeGroupByCode,
-  rankTimeSlot,
-  rankAgeGroup,
+  type RankedShare,
+  type SalesByAges,
+  type SalesByTimes,
 } from "@/lib/mockData";
 
 const LEVEL_LABEL: Record<string, string> = { risk: "위험", warn: "보통", good: "양호" };
@@ -12,9 +13,47 @@ interface SuitabilityPanelProps {
   serviceCode: string | null;
   timeSlot: string | null;
   ageGroup: string | null;
+  timeSales: SalesByTimes[];
+  ageSales: SalesByAges[];
 }
 
-export default function SuitabilityPanel({ serviceCode, timeSlot, ageGroup }: SuitabilityPanelProps) {
+function rankTimeSlotBySales(code: string | null, timeSales: SalesByTimes[]): RankedShare | null {
+  if (!code || timeSales.length === 0) return null;
+
+  const totalSalesAmount = timeSales.reduce((sum, item) => sum + item.salesAmount, 0);
+  const sorted = [...timeSales].sort((a, b) => b.salesAmount - a.salesAmount);
+  const idx = sorted.findIndex((item) => item.timeCode === code);
+  if (idx === -1) return null;
+
+  const item = sorted[idx];
+  return {
+    label: item.timesLabel,
+    pct: totalSalesAmount > 0 ? Math.round((item.salesAmount / totalSalesAmount) * 100) : 0,
+    rank: idx + 1,
+    total: sorted.length,
+  };
+}
+
+function rankAgeGroupBySales(code: string | null, ageSales: SalesByAges[]): RankedShare | null {
+  if (!code || ageSales.length === 0) return null;
+
+  // DashboardClient에서 받은 실제 연령대별 매출액을 기준으로 비중과 순위를 계산한다.
+  const totalSalesAmount = ageSales.reduce((sum, item) => sum + item.salesAmount, 0);
+  const sorted = [...ageSales].sort((a, b) => b.salesAmount - a.salesAmount);
+  const idx = sorted.findIndex((item) => item.ageCode === code);
+  if (idx === -1) return null;
+
+  const item = sorted[idx];
+  return {
+    label: item.ageLabel,
+    pct: totalSalesAmount > 0 ? Math.round((item.salesAmount / totalSalesAmount) * 100) : 0,
+    rank: idx + 1,
+    total: sorted.length,
+  };
+}
+
+export default function SuitabilityPanel({ serviceCode, timeSlot, ageGroup, timeSales, ageSales }: SuitabilityPanelProps) {
+  // 온보딩에서 업종/시간대/연령대 조건을 하나도 받지 못한 경우 기본 안내만 보여준다.
   if (!serviceCode && !timeSlot && !ageGroup) {
     return (
       <section className="suitability-panel">
@@ -24,11 +63,14 @@ export default function SuitabilityPanel({ serviceCode, timeSlot, ageGroup }: Su
     );
   }
 
+  // 업종명/시간대명/연령대명은 고정 코드 목록에서 찾는다.
   const insight = findInsightByServiceCode(serviceCode);
   const timeInfo = findTimeSlotByCode(timeSlot);
-  const timeRank = rankTimeSlot(timeSlot);
   const ageInfo = findAgeGroupByCode(ageGroup);
-  const ageRank = rankAgeGroup(ageGroup);
+
+  // DashboardClient에서 받은 실제 매출액 기준으로 선택한 시간대/연령대의 순위와 비중을 계산한다.
+  const timeRank = rankTimeSlotBySales(timeSlot, timeSales);
+  const ageRank = rankAgeGroupBySales(ageGroup, ageSales);
 
   return (
     <section className="suitability-panel">

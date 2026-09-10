@@ -150,7 +150,7 @@ export interface ServiceSalesRank {
   serviceName: string;  // 업종명
   salesAmount: number;  // 분기 매출액 (분기별 업종기준)
   salesLabel: string;   // 바차트에 사용될 레이블
-  barHeightPct: number;  
+  barHeightPct: number;
 
 }
 
@@ -164,6 +164,24 @@ export interface SalesByDays {
 }
 
 // 시간대별 매출분포 (백엔드 연결시 인터페이스 형태로 대체 예정)
+export interface SalesByTimes {
+  timeCode: "t0006" | "t0611" | "t1114" | "t1417" | "t1721" | "t2124"
+  timesLabel: string;  // "00-06시", "06-11시", ..
+  salesAmount: number; // 해당 시간대의 실제 매출액
+  salesLabel: string; // "123.4억원" 등 화면 표시용
+}
+
+// 연령대별 매출분포
+export interface SalesByAges {
+  ageCode: "age10" | "age20" | "age30" | "age40" | "age50" | "age60p"
+  ageLabel: string; // "10대", "20대", ...
+  salesAmount: number; // 해당 연령대의 실제 매출액
+  salesLabel: string; // "123.4억원" 등 도넛 툴팁과 화면 표시용
+}
+
+
+
+// 아래 데이터: 백엔드 완료시 지우기
 export const TIME_DISTRIBUTION: { code: string; label: string; pct: number; color: string }[] = [
   { code: "t0006", label: "00-06시", pct: 3, color: "#2354d9" },
   { code: "t0611", label: "06-11시", pct: 12, color: "#2f68ed" },

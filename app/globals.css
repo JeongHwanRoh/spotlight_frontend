@@ -803,6 +803,37 @@ textarea {
   font-size: 14px;
 }
 
+/* 도넛차트 툴팁 관련 css */
+.donut-tooltip {
+  position: absolute;
+  z-index: 3;
+  min-width: 76px;
+  padding: 7px 9px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.94);
+  color: #fff;
+  font-size: 12px;
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 10px));
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.28);
+}
+
+.donut-tooltip strong,
+.donut-tooltip b {
+  display: block;
+  line-height: 1.25;
+}
+
+.donut-tooltip strong {
+  font-weight: 600;
+  color: #dbeafe;
+}
+
+.donut-tooltip b {
+  margin-top: 2px;
+  font-size: 14px;
+}
+
 .legend {
   display: grid;
   gap: 8px;

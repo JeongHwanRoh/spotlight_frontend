@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { hydrateFromParams, setDistrict, setDong, setQuarter, setRankingBasis } from "@/store/filtersSlice";
-import { RANKING_BASIS_TABS, TIME_DISTRIBUTION, AGE_DISTRIBUTION, TOP5_INSIGHTS, type RankingBasis, type ServiceSalesRank, type SalesByDays } from "@/lib/mockData";
-import { getDashboardServiceSalesRank, getDashboardTotalSales, getDashboardWeekdaySales, type DashboardServiceSalesRankItem, type DashboardWeekdaySalesItem } from "@/lib/dashboardApi";
+import { RANKING_BASIS_TABS, TOP5_INSIGHTS, type RankingBasis, type ServiceSalesRank, type SalesByAges, type SalesByDays, SalesByTimes } from "@/lib/mockData";
+import { DashboardAgeSalesItem, DashboardTimeSalesItem, getDashboardAgeSales, getDashboardServiceSalesRank, getDashboardTimeSales, getDashboardTotalSales, getDashboardWeekdaySales, type DashboardServiceSalesRankItem, type DashboardWeekdaySalesItem } from "@/lib/dashboardApi";
 import Topbar from "./Topbar";
 import Sidebar from "./Sidebar";
 import BarChartPanel from "./BarChartPanel";
@@ -33,6 +33,11 @@ export default function DashboardClient() {
   const [top5ServiceSales, setTop5ServiceSales] = useState<ServiceSalesRank[]>([]);
   // 요일별 매출액
   const [weekdaySales, setWeekdaySales] = useState<SalesByDays[]>([]);
+
+  // 시간대별 매출액
+  const [timeSales, setTimeSales] = useState<SalesByTimes[]>([]);
+  // 연령대별 매출액
+  const [ageSales, setAgeSales] = useState<SalesByAges[]>([]);
 
   /* 
   useEffect 부분: 리액트 컴포넌트가 화면에 렌더링된 후 API, DOM, 타이머 등 외부 시스템과 동기화할 때 사용
@@ -97,6 +102,19 @@ export default function DashboardClient() {
     fetchWeekdaySales();
   }, [hydrated, filters.districtName, filters.dongName, filters.serviceCode, filters.quarter]);
 
+  // 대시보드 시간대별 매출분포 가져오기(도넛차트)
+  useEffect(() => {
+    if (!hydrated || !filters.districtName) return;
+
+    fetchTimeSales();
+  }, [hydrated, filters.districtName, filters.dongName, filters.serviceCode, filters.quarter]);
+
+  // 대시보드 연령대별 매출분포 가져오기(도넛차트)
+  useEffect(() => {
+    if (!hydrated || !filters.districtName) return;
+
+    fetchAgeSales();
+  }, [hydrated, filters.districtName, filters.dongName, filters.serviceCode, filters.quarter]);
   /* 
   ==================================================================================  
   주요 함수 부분
@@ -255,6 +273,125 @@ export default function DashboardClient() {
       pct: maxSalesAmount > 0 ? Math.round((item.salesAmount / maxSalesAmount) * 100) : 0,
     }));
   }
+
+  // [6] 시간대별 매출분포 조회(파이차트) 관련 함수 모음
+
+  // 백엔드에 시간대별 매출분포 조회 요청 함수
+  async function fetchTimeSales() {
+    if (!filters.districtName) return;
+
+    try {
+      const data = await getDashboardTimeSales({
+        districtName: filters.districtName,
+        dongName: filters.dongName || null,
+        serviceCode: filters.serviceCode,
+        quarter: toQuarterCode(filters.quarter)
+
+      });
+      console.log("시간대별 매출" + data.timeSales);
+      setTimeSales(toTimeSales(data.timeSales));
+
+
+    } catch (error) {
+      console.error("시간대별 매출분포 조회 실패", error)
+    }
+
+  }
+
+  // 백엔드 응답을 원형차트 표시용 데이터로 변환
+  function toTimeSales(item: DashboardTimeSalesItem): SalesByTimes[] {
+    const values = [
+      { timeCode: "t0006", timesLabel: "00-06시", salesAmount: item.t0006SalesAmount },
+      { timeCode: "t0611", timesLabel: "06-11시", salesAmount: item.t0611SalesAmount },
+      { timeCode: "t1114", timesLabel: "11-14시", salesAmount: item.t1114SalesAmount },
+      { timeCode: "t1417", timesLabel: "14-17시", salesAmount: item.t1417SalesAmount },
+      { timeCode: "t1721", timesLabel: "17-21시", salesAmount: item.t1721SalesAmount },
+      { timeCode: "t2124", timesLabel: "21-24시", salesAmount: item.t2124SalesAmount },
+    ] as const;
+
+    // const maxSalesAmount = Math.max(...values.map((item) => item.salesAmount), 0);
+
+    return values.map((item) => ({
+      ...item,
+      salesLabel: formatSalesToEok01(item.salesAmount),
+
+    }));
+  }
+
+  // 시간대별 매출분포 도넛차트 관련
+  const TIME_COLORS = ["#2354d9", "#2f68ed", "#3d82f2", "#64a6ee", "#9ac8f4", "#c4defb"];
+
+  function toTimeDonutData(items: SalesByTimes[]) {
+    const totalSalesAmount = items.reduce((sum, item) => sum + item.salesAmount, 0);
+
+    return items.map((item, index) => ({
+      code: item.timeCode,
+      label: item.timesLabel, // 시간대 레이블
+      pct: totalSalesAmount > 0 ? Math.round((item.salesAmount / totalSalesAmount) * 100) : 0, // 시간대별 매출점유율
+      color: TIME_COLORS[index],
+      tooltipLabel: item.salesLabel,
+    }));
+  }
+
+  // [7] 연령대별 매출분포 조회(파이차트) 관련 함수 모음
+  async function fetchAgeSales() {
+    if (!filters.districtName) return;
+
+    try {
+      // 시간대별 매출분포와 같은 필터 조건으로 연령대별 매출분포를 조회한다.
+      const data = await getDashboardAgeSales({
+        districtName: filters.districtName,
+        dongName: filters.dongName || null,
+        serviceCode: filters.serviceCode,
+        quarter: toQuarterCode(filters.quarter)
+
+      });
+      setAgeSales(toAgeSales(data.ageSales));
+
+
+    } catch (error) {
+      console.error("연령대별 매출분포 조회 실패", error)
+    }
+
+  }
+
+  // 백엔드 응답을 원형차트 표시용 데이터로 변환
+  function toAgeSales(item: DashboardAgeSalesItem): SalesByAges[] {
+    // 백엔드의 age10SalesAmount 같은 컬럼형 응답을 프런트에서 다루기 쉬운 배열로 바꾼다.
+    const values = [
+      { ageCode: "age10", ageLabel: "10대", salesAmount: item.age10SalesAmount },
+      { ageCode: "age20", ageLabel: "20대", salesAmount: item.age20SalesAmount },
+      { ageCode: "age30", ageLabel: "30대", salesAmount: item.age30SalesAmount },
+      { ageCode: "age40", ageLabel: "40대", salesAmount: item.age40SalesAmount },
+      { ageCode: "age50", ageLabel: "50대", salesAmount: item.age50SalesAmount },
+      { ageCode: "age60p", ageLabel: "60대 이상", salesAmount: item.age60pSalesAmount },
+    ] as const;
+
+    return values.map((item) => ({
+      ...item,
+      salesLabel: formatSalesToEok01(item.salesAmount),
+
+    }));
+  }
+
+  // 연령대별 매출분포 도넛차트 관련
+  const AGE_COLORS = ["#2354d9", "#2867e6", "#347ef0", "#60a5fa", "#93c5fd", "#bfdbfe"];
+
+  function toAgeDonutData(items: SalesByAges[]) {
+    const totalSalesAmount = items.reduce((sum, item) => sum + item.salesAmount, 0);
+
+    // 도넛은 pct로 조각 크기를 그리고, tooltipLabel로 실제 매출액을 보여준다.
+    return items.map((item, index) => ({
+      code: item.ageCode,
+      label: item.ageLabel,
+      pct: totalSalesAmount > 0 ? Math.round((item.salesAmount / totalSalesAmount) * 100) : 0,
+      color: AGE_COLORS[index],
+      tooltipLabel: item.salesLabel,
+    }));
+  }
+
+
+
   // [] 사이드바 랭킹 관련 함수 모음
 
   // 사이드바 랭킹 기준을 바꾸고, 해당 차트 섹션으로 스크롤하는 함수(실제 사이드바 상태 변경 부분)
@@ -315,11 +452,18 @@ export default function DashboardClient() {
               dong={filters.dongName ?? ""}
               quarter={filters.quarter}
               serviceCode={filters.serviceCode} />
-            <DonutPanel id="time" title="시간대별 매출분포" centerLabel="시간대별" data={TIME_DISTRIBUTION} />
-            <DonutPanel id="age" title="연령대별 매출분포" centerLabel="연령대" data={AGE_DISTRIBUTION} />
+
+            <DonutPanel
+              id="time"
+              title="시간대별 매출분포"
+              centerLabel="시간대별"
+              data={toTimeDonutData(timeSales)}
+            />
+
+            <DonutPanel id="age" title="연령대별 매출분포" centerLabel="연령대" data={toAgeDonutData(ageSales)} />
           </section>
 
-          <SuitabilityPanel serviceCode={filters.serviceCode} timeSlot={filters.timeSlot} ageGroup={filters.ageGroup} />
+          <SuitabilityPanel serviceCode={filters.serviceCode} timeSlot={filters.timeSlot} ageGroup={filters.ageGroup} timeSales={timeSales} ageSales={ageSales} />
         </div>
       </div>
 
