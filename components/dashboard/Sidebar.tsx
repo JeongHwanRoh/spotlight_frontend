@@ -85,7 +85,7 @@ export default function Sidebar({
   return (
     <aside className="sidebar">
       <section className="summary-card">
-        <p> {quarter} 총 매출액</p>
+        <p>상권 총매출액</p>
         <strong>{totalSalesLabel}</strong>
         <p>
           {district} {dong}

@@ -17,6 +17,7 @@ interface SuitabilityPanelProps {
   ageSales: SalesByAges[];
 }
 
+// DashboardClient에서 받은 실제 시간대별 매출액을 기준으로 비중과 순위를 계산한다.
 function rankTimeSlotBySales(code: string | null, timeSales: SalesByTimes[]): RankedShare | null {
   if (!code || timeSales.length === 0) return null;
 
@@ -34,10 +35,10 @@ function rankTimeSlotBySales(code: string | null, timeSales: SalesByTimes[]): Ra
   };
 }
 
+// DashboardClient에서 받은 실제 연령대별 매출액을 기준으로 비중과 순위를 계산한다.
 function rankAgeGroupBySales(code: string | null, ageSales: SalesByAges[]): RankedShare | null {
   if (!code || ageSales.length === 0) return null;
 
-  // DashboardClient에서 받은 실제 연령대별 매출액을 기준으로 비중과 순위를 계산한다.
   const totalSalesAmount = ageSales.reduce((sum, item) => sum + item.salesAmount, 0);
   const sorted = [...ageSales].sort((a, b) => b.salesAmount - a.salesAmount);
   const idx = sorted.findIndex((item) => item.ageCode === code);

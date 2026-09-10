@@ -1,5 +1,11 @@
 /* 
+백엔드 거치지 않는 고정 데이터 모음
+*/
+
+/* 
+==================================================================================================
 [1] 자치구, 행정동, 업종, 시간대, 연령대, 분기 관련 고정값
+==================================================================================================
 */
 
 // 자치구(서울시 25개구) => 프런트 고정값
@@ -142,7 +148,9 @@ export const QUARTERS = ["2026 Q1"] as const;
 
 
 /* 
+==================================================================================================
 [2] 4가지 대시보드에 사용될 데이터 구조 정의
+==================================================================================================
 */
 // 대시보드의 TOP5 업종 매출 순위 바차트에서 사용할 데이터 구조
 export interface ServiceSalesRank {
@@ -179,30 +187,10 @@ export interface SalesByAges {
   salesLabel: string; // "123.4억원" 등 도넛 툴팁과 화면 표시용
 }
 
-
-
-// 아래 데이터: 백엔드 완료시 지우기
-export const TIME_DISTRIBUTION: { code: string; label: string; pct: number; color: string }[] = [
-  { code: "t0006", label: "00-06시", pct: 3, color: "#2354d9" },
-  { code: "t0611", label: "06-11시", pct: 12, color: "#2f68ed" },
-  { code: "t1114", label: "11-14시", pct: 18, color: "#3d82f2" },
-  { code: "t1417", label: "14-17시", pct: 22, color: "#64a6ee" },
-  { code: "t1721", label: "17-21시", pct: 31, color: "#9ac8f4" },
-  { code: "t2124", label: "21-24시", pct: 14, color: "#c4defb" },
-];
-
-// 연령대별 매출분포(백엔드 연결시 인터페이스 형태로 대체 예정)
-export const AGE_DISTRIBUTION: { code: string; label: string; pct: number; color: string }[] = [
-  { code: "age10", label: "10대", pct: 4, color: "#2354d9" },
-  { code: "age20", label: "20대", pct: 18, color: "#2867e6" },
-  { code: "age30", label: "30대", pct: 21, color: "#347ef0" },
-  { code: "age40", label: "40대", pct: 24, color: "#60a5fa" },
-  { code: "age50", label: "50대", pct: 20, color: "#93c5fd" },
-  { code: "age60p", label: "60대+", pct: 13, color: "#bfdbfe" },
-];
-
 /* 
+==================================================================================================
 [3] 사이드바 TOP5 업종 및 관련 데이터
+==================================================================================================
 */
 
 // 사이드바 TOP5 업종 순위매길 때 기준 (4가지-분기별, 요일별, 시간대별, 연령대별)
@@ -330,23 +318,4 @@ export interface RankedShare {
   pct: number;
   rank: number;
   total: number;
-}
-
-// 선택한 시간대 코드가 전체 시간대 매출 비중 중 몇 위인지 계산한다.(백엔드 연결시 목업 상수 의존성 제거 예정)
-export function rankTimeSlot(code: string | null): RankedShare | null {
-  if (!code) return null;
-  const sorted = [...TIME_DISTRIBUTION].sort((a, b) => b.pct - a.pct);
-  const idx = sorted.findIndex((t) => t.code === code);
-  if (idx === -1) return null;
-  return { label: sorted[idx].label, pct: sorted[idx].pct, rank: idx + 1, total: sorted.length };
-}
-
-// 선택한 연령대 코드가 전체 연령대 매출 비중 중 몇 위인지 계산한다.
-// pct가 높은 순서로 정렬한 뒤 rank, pct, label, 전체 개수를 반환한다. (백엔드 연결시 목업 상수 의존성 제거 예정)
-export function rankAgeGroup(code: string | null): RankedShare | null {
-  if (!code) return null;
-  const sorted = [...AGE_DISTRIBUTION].sort((a, b) => b.pct - a.pct);
-  const idx = sorted.findIndex((a) => a.code === code);
-  if (idx === -1) return null;
-  return { label: sorted[idx].label, pct: sorted[idx].pct, rank: idx + 1, total: sorted.length };
 }

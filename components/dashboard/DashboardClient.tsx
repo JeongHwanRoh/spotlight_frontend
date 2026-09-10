@@ -3,9 +3,27 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { hydrateFromParams, setDistrict, setDong, setQuarter, setRankingBasis } from "@/store/filtersSlice";
-import { RANKING_BASIS_TABS, TOP5_INSIGHTS, type RankingBasis, type ServiceSalesRank, type SalesByAges, type SalesByDays, SalesByTimes } from "@/lib/mockData";
-import { DashboardAgeSalesItem, DashboardTimeSalesItem, getDashboardAgeSales, getDashboardServiceSalesRank, getDashboardTimeSales, getDashboardTotalSales, getDashboardWeekdaySales, type DashboardServiceSalesRankItem, type DashboardWeekdaySalesItem } from "@/lib/dashboardApi";
+import {
+  hydrateFromParams,
+  setDistrict,
+  setDong,
+  setQuarter,
+  setRankingBasis,
+} from "@/store/filtersSlice";
+
+import {
+  RANKING_BASIS_TABS,
+  SERVICES,
+  TOP5_INSIGHTS,
+  type RankingBasis,
+} from "@/lib/mockData";
+
+import {
+  toAgeDonutData,
+  toTimeDonutData,
+} from "@/lib/dashboardTransforms";
+
+import { useDashboardData } from "@/hooks/useDashboardData";
 import Topbar from "./Topbar";
 import Sidebar from "./Sidebar";
 import BarChartPanel from "./BarChartPanel";
@@ -22,26 +40,31 @@ export default function DashboardClient() {
   const dispatch = useAppDispatch();
   const filters = useAppSelector((s) => s.filters);
 
-  // URL 쿼리스트링을 Redux 상태에 반영하는 초기 복원 작업이 끝났는지 표시하는 플래그 
-  // URL에서 값을 읽어 Redux 상태에 넣기 전에는 false, 상태가 업데이트되면 true
   const [hydrated, setHydrated] = useState(false);
-  // TOP5 인사이트 카드 클릭 시 열리는 상세 모달의 대상 인덱스
   const [openInsightIndex, setOpenInsightIndex] = useState<number | null>(null);
-  // 분기별 총 추정 매출액
-  const [totalSalesLabel, setTotalSalesLabel] = useState("-");
-  // 총 추정매출액 TOP5 업종 목록
-  const [top5ServiceSales, setTop5ServiceSales] = useState<ServiceSalesRank[]>([]);
-  // 요일별 매출액
-  const [weekdaySales, setWeekdaySales] = useState<SalesByDays[]>([]);
 
-  // 시간대별 매출액
-  const [timeSales, setTimeSales] = useState<SalesByTimes[]>([]);
-  // 연령대별 매출액
-  const [ageSales, setAgeSales] = useState<SalesByAges[]>([]);
+  // 필터 조건이 준비되면 useDashboardData가 매출 API들을 호출하고,
+  // 응답을 화면 표시용 데이터로 변환해 반환한다.
+  const {
+    totalSalesLabel,
+    top5ServiceSales,
+    weekdaySales,
+    timeSales,
+    ageSales,
+  } = useDashboardData({
+    hydrated,
+    filters,
+  });
+
+  const serviceCode = searchParams.get("serviceCode");
+  const serviceName = SERVICES.find((service) => service.code === serviceCode)?.name ?? "";
+  const openInsight = openInsightIndex !== null ? TOP5_INSIGHTS[openInsightIndex] : null;
 
   /* 
-  useEffect 부분: 리액트 컴포넌트가 화면에 렌더링된 후 API, DOM, 타이머 등 외부 시스템과 동기화할 때 사용
-  
+  ==================================================================================================
+  [1] useEffect 부분: 리액트 컴포넌트가 화면에 렌더링된 후 API, DOM, 타이머 등 외부 시스템과 동기화할 때 사용
+  ** 대시보드 관련 주요 API 및 상태변화 로직은 useDashboardData.ts에 구현 **
+  ==================================================================================================
   */
 
   // 온보딩에서 넘어오거나 새로고침했을 때 URL 쿼리스트링을 Redux 필터 상태로 복원한다.
@@ -78,51 +101,11 @@ export default function DashboardClient() {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  // 분기별 총 추정매출액을 백엔드에서 가져와 화면에 표시
-  useEffect(() => {
-    // 아직 URL 복원이 안끝났거나, 자치구가 없으면 조회하지 않음
-    if (!hydrated || !filters.districtName) return;
-
-    // 분기별 총 추정매출액 조회 요청 함수 호출
-    fetchTotalSales();
-  }, [hydrated, filters.districtName, filters.dongName, filters.quarter]);
-
-  // 대시보드 TOP5 업종 매출 순위 가져오기(바차트용)
-  useEffect(() => {
-    // 아직 URL 복원이 안끝났거나, 자치구가 없으면 조회하지 않음
-    if (!hydrated || !filters.districtName) return;
-
-    fetchServiceSalesRank();
-  }, [hydrated, filters.districtName, filters.dongName, filters.quarter]);
-
-  // 대시보드 요일별 매출분포 가져오기(라인차트용)
-  useEffect(() => {
-    if (!hydrated || !filters.districtName) return;
-
-    fetchWeekdaySales();
-  }, [hydrated, filters.districtName, filters.dongName, filters.serviceCode, filters.quarter]);
-
-  // 대시보드 시간대별 매출분포 가져오기(도넛차트)
-  useEffect(() => {
-    if (!hydrated || !filters.districtName) return;
-
-    fetchTimeSales();
-  }, [hydrated, filters.districtName, filters.dongName, filters.serviceCode, filters.quarter]);
-
-  // 대시보드 연령대별 매출분포 가져오기(도넛차트)
-  useEffect(() => {
-    if (!hydrated || !filters.districtName) return;
-
-    fetchAgeSales();
-  }, [hydrated, filters.districtName, filters.dongName, filters.serviceCode, filters.quarter]);
   /* 
   ==================================================================================  
-  주요 함수 부분
+  [2] 주요 함수 부분
   ==================================================================================  
   */
-
-  // [1] 행정동/자치구 필터 관련 함수 모음
-
   // 대시보드 필터가 바뀔 때 Redux 상태와 URL 쿼리스트링을 같은 값으로 맞춘다.
   // URL 순서를 districtName -> dongName -> serviceCode -> time -> age로 고정해 공유 가능한 주소를 만든다.
   function replaceDashboardQuery(next: { districtName?: string; dongName?: string | null }) {
@@ -157,243 +140,6 @@ export default function DashboardClient() {
     dispatch(setQuarter(next));
   }
 
-  // [2] 금액, 문자열 등 포매팅 함수 모음
-
-  // 추정매출액 화면조회 단위를 억단위로 끊기 (소수 첫째자리까지)
-  function formatSalesToEok01(totalSales: number) {
-    return `${Number((totalSales / 100000000).toFixed(1)).toLocaleString()}억원`;
-  }
-
-  // 추정매출액 화면조회 단위를 억단위로 끊기 (소수 둘째자리까지)
-  function formatSalesToEok02(totalSales: number) {
-    return `${Number((totalSales / 100000000).toFixed(2)).toLocaleString()}억원`;
-  }
-
-  // '2026 Q1' -> 20261 숫자로 변환
-  function toQuarterCode(quarter: string): number {
-    const match = quarter.match(/^(\d{4})\s*Q([1-4])$/);
-    if (!match) {
-      throw new Error(`Invalid quarter format: ${quarter}`);
-    }
-    return Number(`${match[1]}${match[2]}`);
-  }
-
-  // [3] 사이드바 분기별 총 추정매출액 조회 관련 함수 모음
-
-  // 백엔드에 분기별 총 추정매출액 조회 요청 함수
-  async function fetchTotalSales() {
-    try {
-      const data = await getDashboardTotalSales({
-        districtName: filters.districtName!,
-        dongName: filters.dongName || null,
-        quarter: toQuarterCode(filters.quarter),
-      });
-      // 화면에 표시할 문자열로 저장
-      setTotalSalesLabel(formatSalesToEok01(data.totalSales));
-
-    } catch (error) {
-      console.error("총 추정매출액 조회 실패", error);
-    }
-  }
-
-  // [4] 총 추정매출액 TOP5 업종 조회 바차트 관련 함수
-
-  // 백엔드에 총 추정매출액 TOP5 업종 조회 요청 함수
-  // 순서: TOP5 업종 가져오는 API 요청및응답  -> 바차트 표시용 데이터 변환 -> 총 추정매출액 TOP5 업종 목록 상태 변환 -> 바차트에 표시
-  async function fetchServiceSalesRank() {
-    if (!filters.districtName) return;
-
-    try {
-      const data = await getDashboardServiceSalesRank({
-        districtName: filters.districtName,
-        dongName: filters.dongName || null,
-        quarter: toQuarterCode(filters.quarter)
-
-      });
-
-      setTop5ServiceSales(toServiceSalesRanks(data.serviceSalesRanks));
-    } catch (error) {
-      console.error("총 추정매출액 TOP5 업종 조회 실패", error)
-    }
-
-  }
-
-  // 백엔드 응답을 바차트 표시용 데이터로 변환
-  function toServiceSalesRanks(items: DashboardServiceSalesRankItem[]): ServiceSalesRank[] {
-    const maxSalesAmount = Math.max(...items.map((item) => item.salesAmount), 0);
-
-    return items.map((item) => ({
-      serviceCode: item.serviceCode,
-      serviceName: item.serviceName,
-      salesAmount: item.salesAmount,
-      salesLabel: formatSalesToEok01(item.salesAmount),
-      barHeightPct: maxSalesAmount > 0 ? Math.max(Math.round((item.salesAmount / maxSalesAmount) * 100), 8) : 0, // 바차트 높이 비율(계산1위가 100이라고 가정)
-    }));
-  }
-
-  // [5] 요일별 매출분포 조회 라인차트 관련 함수 모음
-
-  // 백엔드에 요일별 매출분포 조회 요청 함수
-  async function fetchWeekdaySales() {
-    if (!filters.districtName) return;
-
-    try {
-      const data = await getDashboardWeekdaySales({
-        districtName: filters.districtName,
-        dongName: filters.dongName || null,
-        serviceCode: filters.serviceCode,
-        quarter: toQuarterCode(filters.quarter)
-
-      });
-
-      setWeekdaySales(toWeekdaySales(data.weekdaySales));
-    } catch (error) {
-      console.error("요일별 매출분포 조회 실패", error)
-    }
-
-  }
-
-  // 백엔드 응답을 라인차트 표시용 데이터로 변환
-  function toWeekdaySales(item: DashboardWeekdaySalesItem): SalesByDays[] {
-    const values = [
-      { dayCode: "mon", daysLabel: "월", salesAmount: item.monSalesAmount },
-      { dayCode: "tue", daysLabel: "화", salesAmount: item.tueSalesAmount },
-      { dayCode: "wed", daysLabel: "수", salesAmount: item.wedSalesAmount },
-      { dayCode: "thu", daysLabel: "목", salesAmount: item.thuSalesAmount },
-      { dayCode: "fri", daysLabel: "금", salesAmount: item.friSalesAmount },
-      { dayCode: "sat", daysLabel: "토", salesAmount: item.satSalesAmount },
-      { dayCode: "sun", daysLabel: "일", salesAmount: item.sunSalesAmount },
-    ] as const;
-
-    const maxSalesAmount = Math.max(...values.map((item) => item.salesAmount), 0);
-
-    return values.map((item) => ({
-      ...item,
-      salesLabel: formatSalesToEok01(item.salesAmount),
-      pct: maxSalesAmount > 0 ? Math.round((item.salesAmount / maxSalesAmount) * 100) : 0,
-    }));
-  }
-
-  // [6] 시간대별 매출분포 조회(파이차트) 관련 함수 모음
-
-  // 백엔드에 시간대별 매출분포 조회 요청 함수
-  async function fetchTimeSales() {
-    if (!filters.districtName) return;
-
-    try {
-      const data = await getDashboardTimeSales({
-        districtName: filters.districtName,
-        dongName: filters.dongName || null,
-        serviceCode: filters.serviceCode,
-        quarter: toQuarterCode(filters.quarter)
-
-      });
-      console.log("시간대별 매출" + data.timeSales);
-      setTimeSales(toTimeSales(data.timeSales));
-
-
-    } catch (error) {
-      console.error("시간대별 매출분포 조회 실패", error)
-    }
-
-  }
-
-  // 백엔드 응답을 원형차트 표시용 데이터로 변환
-  function toTimeSales(item: DashboardTimeSalesItem): SalesByTimes[] {
-    const values = [
-      { timeCode: "t0006", timesLabel: "00-06시", salesAmount: item.t0006SalesAmount },
-      { timeCode: "t0611", timesLabel: "06-11시", salesAmount: item.t0611SalesAmount },
-      { timeCode: "t1114", timesLabel: "11-14시", salesAmount: item.t1114SalesAmount },
-      { timeCode: "t1417", timesLabel: "14-17시", salesAmount: item.t1417SalesAmount },
-      { timeCode: "t1721", timesLabel: "17-21시", salesAmount: item.t1721SalesAmount },
-      { timeCode: "t2124", timesLabel: "21-24시", salesAmount: item.t2124SalesAmount },
-    ] as const;
-
-    // const maxSalesAmount = Math.max(...values.map((item) => item.salesAmount), 0);
-
-    return values.map((item) => ({
-      ...item,
-      salesLabel: formatSalesToEok01(item.salesAmount),
-
-    }));
-  }
-
-  // 시간대별 매출분포 도넛차트 관련
-  const TIME_COLORS = ["#2354d9", "#2f68ed", "#3d82f2", "#64a6ee", "#9ac8f4", "#c4defb"];
-
-  function toTimeDonutData(items: SalesByTimes[]) {
-    const totalSalesAmount = items.reduce((sum, item) => sum + item.salesAmount, 0);
-
-    return items.map((item, index) => ({
-      code: item.timeCode,
-      label: item.timesLabel, // 시간대 레이블
-      pct: totalSalesAmount > 0 ? Math.round((item.salesAmount / totalSalesAmount) * 100) : 0, // 시간대별 매출점유율
-      color: TIME_COLORS[index],
-      tooltipLabel: item.salesLabel,
-    }));
-  }
-
-  // [7] 연령대별 매출분포 조회(파이차트) 관련 함수 모음
-  async function fetchAgeSales() {
-    if (!filters.districtName) return;
-
-    try {
-      // 시간대별 매출분포와 같은 필터 조건으로 연령대별 매출분포를 조회한다.
-      const data = await getDashboardAgeSales({
-        districtName: filters.districtName,
-        dongName: filters.dongName || null,
-        serviceCode: filters.serviceCode,
-        quarter: toQuarterCode(filters.quarter)
-
-      });
-      setAgeSales(toAgeSales(data.ageSales));
-
-
-    } catch (error) {
-      console.error("연령대별 매출분포 조회 실패", error)
-    }
-
-  }
-
-  // 백엔드 응답을 원형차트 표시용 데이터로 변환
-  function toAgeSales(item: DashboardAgeSalesItem): SalesByAges[] {
-    // 백엔드의 age10SalesAmount 같은 컬럼형 응답을 프런트에서 다루기 쉬운 배열로 바꾼다.
-    const values = [
-      { ageCode: "age10", ageLabel: "10대", salesAmount: item.age10SalesAmount },
-      { ageCode: "age20", ageLabel: "20대", salesAmount: item.age20SalesAmount },
-      { ageCode: "age30", ageLabel: "30대", salesAmount: item.age30SalesAmount },
-      { ageCode: "age40", ageLabel: "40대", salesAmount: item.age40SalesAmount },
-      { ageCode: "age50", ageLabel: "50대", salesAmount: item.age50SalesAmount },
-      { ageCode: "age60p", ageLabel: "60대 이상", salesAmount: item.age60pSalesAmount },
-    ] as const;
-
-    return values.map((item) => ({
-      ...item,
-      salesLabel: formatSalesToEok01(item.salesAmount),
-
-    }));
-  }
-
-  // 연령대별 매출분포 도넛차트 관련
-  const AGE_COLORS = ["#2354d9", "#2867e6", "#347ef0", "#60a5fa", "#93c5fd", "#bfdbfe"];
-
-  function toAgeDonutData(items: SalesByAges[]) {
-    const totalSalesAmount = items.reduce((sum, item) => sum + item.salesAmount, 0);
-
-    // 도넛은 pct로 조각 크기를 그리고, tooltipLabel로 실제 매출액을 보여준다.
-    return items.map((item, index) => ({
-      code: item.ageCode,
-      label: item.ageLabel,
-      pct: totalSalesAmount > 0 ? Math.round((item.salesAmount / totalSalesAmount) * 100) : 0,
-      color: AGE_COLORS[index],
-      tooltipLabel: item.salesLabel,
-    }));
-  }
-
-
-
-  // [] 사이드바 랭킹 관련 함수 모음
-
   // 사이드바 랭킹 기준을 바꾸고, 해당 차트 섹션으로 스크롤하는 함수(실제 사이드바 상태 변경 부분)
   function handleRankingBasisChange(basis: RankingBasis) {
     dispatch(setRankingBasis(basis));
@@ -403,17 +149,16 @@ export default function DashboardClient() {
     }
   }
 
-  // 선택된 TOP5 인사이트가 있을 때만 모달에 전달한다.
-  const openInsight = openInsightIndex !== null ? TOP5_INSIGHTS[openInsightIndex] : null;
-
-  // [기타] 기타 함수 및 로직
-
   // URL -> Redux 복원이 끝나기 전이거나 자치구가 없으면 빈 화면을 유지한다.
   if (!hydrated || !filters.districtName) {
     return null;
   }
 
-
+  /* 
+  ==================================================================================  
+  [3] html 부분
+  ==================================================================================  
+  */
   return (
     <main className="dashboard-shell">
       <Topbar
@@ -455,12 +200,12 @@ export default function DashboardClient() {
 
             <DonutPanel
               id="time"
-              title="시간대별 매출분포"
+              title={`시간대별 매출분포 (${serviceName})`}
               centerLabel="시간대별"
               data={toTimeDonutData(timeSales)}
             />
 
-            <DonutPanel id="age" title="연령대별 매출분포" centerLabel="연령대" data={toAgeDonutData(ageSales)} />
+            <DonutPanel id="age" title={`연령대별 매출분포 (${serviceName})`} centerLabel="연령대" data={toAgeDonutData(ageSales)} />
           </section>
 
           <SuitabilityPanel serviceCode={filters.serviceCode} timeSlot={filters.timeSlot} ageGroup={filters.ageGroup} timeSales={timeSales} ageSales={ageSales} />
