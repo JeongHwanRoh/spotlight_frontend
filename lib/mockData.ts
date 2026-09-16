@@ -171,7 +171,7 @@ export interface SalesByDays {
   pct: number; // 라인차트 y좌표 계산용
 }
 
-// 시간대별 매출분포 (백엔드 연결시 인터페이스 형태로 대체 예정)
+// 시간대별 매출분포
 export interface SalesByTimes {
   timeCode: "t0006" | "t0611" | "t1114" | "t1417" | "t1721" | "t2124"
   timesLabel: string;  // "00-06시", "06-11시", ..
@@ -193,9 +193,8 @@ export interface SalesByAges {
 ==================================================================================================
 */
 
-// 사이드바 TOP5 업종 순위매길 때 기준 (4가지-분기별, 요일별, 시간대별, 연령대별)
-// 분기별(quarter), 요일별(weekday), 시간대별(time), 연령대별(age)
-export type RankingBasis = "quarter" | "weekday" | "time" | "age";
+// 사이드바 TOP5 업종 순위매길 때 기준 (분기별, 시간대별, 연령대별)
+export type RankingBasis = "quarter" | "time" | "age";
 
 export const RANKING_BASIS_TABS: { key: RankingBasis; label: string; anchor: string }[] = [
   { key: "quarter", label: "분기별", anchor: "quarter" },
@@ -205,117 +204,3 @@ export const RANKING_BASIS_TABS: { key: RankingBasis; label: string; anchor: str
 
 // TOP5 업종의 위험 수준 (위험-보통-양호)
 export type RiskLevel = "risk" | "warn" | "good";
-
-// 대시보드의 TOP5 업종 인사이트 카드/모달/적정성 메시지에서 사용할 데이터 구조를 정의
-export interface ServiceInsight {
-  name: string;
-  level: RiskLevel;
-  quarterSalesLabel: string;
-  barHeightPct: number;
-  open: number;
-  close: number;
-  stores: number;
-  average: string;
-  pills: { level: RiskLevel; text: string }[];
-  message: string;
-}
-
-// TOP5_인사이트 가데이터(백엔드 연결시 제거 예정)
-export const TOP5_INSIGHTS: ServiceInsight[] = [
-  {
-    name: "한식음식점",
-    level: "risk",
-    quarterSalesLabel: "962억",
-    barHeightPct: 92,
-    open: 4.1,
-    close: 12.3,
-    stores: 1240,
-    average: "7,800만원",
-    pills: [
-      { level: "risk", text: "폐업률 > 개업률 × 3" },
-      { level: "risk", text: "점포 수 과잉" },
-    ],
-    message: "폐업률이 개업률의 3배로 생존이 어려운 포화 상권입니다. 강력한 차별화 전략 없이는 신규 진입을 권장하지 않습니다.",
-  },
-  {
-    name: "일반의원",
-    level: "warn",
-    quarterSalesLabel: "925억",
-    barHeightPct: 86,
-    open: 6.3,
-    close: 6.7,
-    stores: 312,
-    average: "29,600만원",
-    pills: [
-      { level: "warn", text: "개폐업률 균형" },
-      { level: "warn", text: "높은 진입 장벽" },
-    ],
-    message: "개폐업률이 비슷해 안정적이나, 전문 면허 업종으로 진입 장벽이 높습니다. 입지보다 전문 분야 선택이 더 중요합니다.",
-  },
-  {
-    name: "일반의류",
-    level: "warn",
-    quarterSalesLabel: "654억",
-    barHeightPct: 62,
-    open: 5.2,
-    close: 7.1,
-    stores: 520,
-    average: "12,600만원",
-    pills: [
-      { level: "warn", text: "시장 축소 추세" },
-      { level: "warn", text: "온라인 경쟁" },
-    ],
-    message: "폐업률이 개업률을 소폭 앞서며 오프라인 의류 시장 축소 추세가 보입니다. 온라인 병행 전략이 필수입니다.",
-  },
-  {
-    name: "일반교습학원",
-    level: "good",
-    quarterSalesLabel: "480억",
-    barHeightPct: 48,
-    open: 8.5,
-    close: 4.8,
-    stores: 430,
-    average: "11,200만원",
-    pills: [
-      { level: "good", text: "개업률 > 폐업률" },
-      { level: "good", text: "안정적 수요" },
-    ],
-    message: "개업률이 폐업률을 크게 웃돌며 성장 중입니다. 학령 인구가 많은 지역 특성상 수요가 안정적입니다.",
-  },
-  {
-    name: "커피·음료",
-    level: "good",
-    quarterSalesLabel: "222억",
-    barHeightPct: 31,
-    open: 8.2,
-    close: 3.1,
-    stores: 287,
-    average: "7,700만원",
-    pills: [
-      { level: "good", text: "개업률 ↑ 급성장" },
-      { level: "good", text: "평균 매출 38%↑" },
-    ],
-    message: "개업률(8.2%)이 폐업률(3.1%)의 2.6배로 성장 추세입니다. 점포당 평균 매출도 서울 평균 대비 38% 높아 유망합니다.",
-  },
-];
-
-// SERVICES에서 코드로 업종명을 찾고, 그 이름으로 TOP5_INSIGHTS를 찾는 로직
-export function findServiceByCode(code: string | null) {
-  if (!code) return null;
-  return SERVICES.find((service) => service.code === code) ?? null;
-}
-
-// 임시용 (백엔드 연결시 제거 예정)
-export function findInsightByServiceCode(code: string | null) {
-  const service = findServiceByCode(code);
-  if (!service) return null;
-
-  return TOP5_INSIGHTS.find((insight) => insight.name === service.name) ?? null;
-}
-
-export interface RankedShare {
-  label: string;
-  pct: number;
-  rank: number;
-  total: number;
-}

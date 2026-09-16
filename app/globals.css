@@ -628,6 +628,55 @@ textarea {
   background: #071a0f;
 }
 
+/* ── 개업률 · 폐업률 관계 바 ── */
+.relation-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.relation-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.relation-bar-row span {
+  flex: 0 0 92px;
+  color: var(--soft);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.relation-bar-track {
+  position: relative;
+  flex: 1;
+  height: 10px;
+  border-radius: 6px;
+  background: var(--panel-deep);
+  overflow: hidden;
+}
+
+.relation-bar-fill {
+  height: 100%;
+  border-radius: 6px;
+  background: var(--blue-bright);
+  transition: width 0.2s ease;
+}
+
+.relation-bar-fill.risk {
+  background: #9f1d1d;
+}
+
+.relation-bar-fill.warn {
+  background: #a96300;
+}
+
+.relation-bar-fill.good {
+  background: #11753d;
+}
+
 .content-grid {
   display: grid;
   grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr);

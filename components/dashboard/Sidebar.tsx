@@ -1,9 +1,8 @@
 "use client";
 
-import { RANKING_BASIS_TABS, TOP5_INSIGHTS, type RankingBasis } from "@/lib/mockData";
+import { RANKING_BASIS_TABS, type RankingBasis } from "@/lib/mockData";
+import type { SidebarServiceInsight } from "@/lib/sidebarTransforms";
 import { useRouter } from "next/navigation";
-
-const LEVEL_LABEL: Record<string, string> = { risk: "위험", warn: "보통", good: "양호" };
 
 interface SidebarProps {
   district: string;
@@ -14,6 +13,7 @@ interface SidebarProps {
   serviceCode: string | null;
   timeSlot: string | null;
   ageGroup: string | null;
+  sidebarServiceInsights: SidebarServiceInsight[];
   onRankingBasisChange: (basis: RankingBasis) => void;
   onOpenInsight: (index: number) => void;
 }
@@ -45,6 +45,7 @@ export default function Sidebar({
   serviceCode,
   timeSlot,
   ageGroup,
+  sidebarServiceInsights,
   onRankingBasisChange,
   onOpenInsight,
 }: SidebarProps) {
@@ -108,17 +109,17 @@ export default function Sidebar({
       <section className="ranking-card">
         <h2>{rankingTitleLabel} TOP 5 업종</h2>
         <ol>
-          {TOP5_INSIGHTS.map((insight, index) => (
-            <li key={insight.name}>
+          {sidebarServiceInsights.map((insight, index) => (
+            <li key={insight.serviceCode}>
               <span className="rank">{index + 1}</span>
-              <b>{insight.name}</b>
-              <em>{insight.quarterSalesLabel}</em>
+              <b>{insight.serviceName}</b>
+              <em>{insight.salesLabel}</em>
               <button
                 type="button"
-                className={`badge ${insight.level}`}
+                className={`badge ${insight.riskLevel}`}
                 onClick={() => onOpenInsight(index)}
               >
-                {LEVEL_LABEL[insight.level]}
+                {insight.riskLabel}
               </button>
             </li>
           ))}

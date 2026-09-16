@@ -10,7 +10,7 @@ export interface FiltersState {
   timeSlot: string | null; // 시간대
   ageGroup: string | null; // 연령 그룹
   quarter: string; // 분기 (EX. 2026 Q1)
-  rankingBasis: RankingBasis; // TOP5 업종 및 상권을 어떤 관점으로 볼지? (분기별-quarter, 요일별=weekday, 시간대별-time, 연령대별-age)
+  rankingBasis: RankingBasis; // TOP5 업종 및 상권을 어떤 관점으로 볼지? (분기별-quarter, 시간대별-time, 연령대별-age)
 }
 
 // Redux store에 처음 등록될 때 사용할 필터 기본값
@@ -73,7 +73,7 @@ const filtersSlice = createSlice({
     setQuarter(state, action: PayloadAction<string>) {
       state.quarter = action.payload;
     },
-    // 사이드바에서 랭킹 기준 탭(분기/요일/시간/연령)을 변경할 때 사용한다.
+    // 사이드바에서 랭킹 기준 탭(분기/시간/연령)을 변경할 때 사용한다.
     setRankingBasis(state, action: PayloadAction<RankingBasis>) {
       state.rankingBasis = action.payload;
     },

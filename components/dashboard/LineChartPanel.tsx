@@ -50,7 +50,7 @@ export default function LineChartPanel({
   serviceCode,
 
 }: LineChartProps) {
-  // serviceCode로 목업 업종 목록에서 업종명을 조회
+  // serviceCode로 고정 업종 목록에서 업종명을 조회
   const serviceName = SERVICES.find((service) => service.code === serviceCode)?.name ?? "";
   if (weekdaySales.length === 0) {
     return (
@@ -60,7 +60,7 @@ export default function LineChartPanel({
       </article>
     );
   }
-  // 백엔드 데이터가 아직 없으면 목업 데이터를 사용해서 차트가 비어 보이지 않게 처리
+  // 백엔드 응답을 차트 렌더링에 사용한다.
   const chartData = weekdaySales;
   // 각 요일 데이터를 SVG 좌표로 변환
   const points = chartData.map((d, i) => toPoint(i, d.pct, chartData.length));

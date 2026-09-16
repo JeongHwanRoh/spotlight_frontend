@@ -14,7 +14,6 @@ import {
 import {
   RANKING_BASIS_TABS,
   SERVICES,
-  TOP5_INSIGHTS,
   type RankingBasis,
 } from "@/lib/mockData";
 
@@ -22,6 +21,10 @@ import {
   toAgeDonutData,
   toTimeDonutData,
 } from "@/lib/dashboardTransforms";
+
+import { getSidebarServiceRank } from "@/lib/sidebarApi";
+import { toSidebarServiceInsights, type SidebarServiceInsight } from "@/lib/sidebarTransforms";
+import { toQuarterCode } from "@/lib/formatter";
 
 import { useDashboardData } from "@/hooks/useDashboardData";
 import Topbar from "./Topbar";
@@ -42,6 +45,7 @@ export default function DashboardClient() {
 
   const [hydrated, setHydrated] = useState(false);
   const [openInsightIndex, setOpenInsightIndex] = useState<number | null>(null);
+  const [sidebarServiceInsights, setSidebarServiceInsights] = useState<SidebarServiceInsight[]>([]);
 
   // 필터 조건이 준비되면 useDashboardData가 매출 API들을 호출하고,
   // 응답을 화면 표시용 데이터로 변환해 반환한다.
@@ -58,7 +62,7 @@ export default function DashboardClient() {
 
   const serviceCode = searchParams.get("serviceCode");
   const serviceName = SERVICES.find((service) => service.code === serviceCode)?.name ?? "";
-  const openInsight = openInsightIndex !== null ? TOP5_INSIGHTS[openInsightIndex] : null;
+  const openInsight = openInsightIndex !== null ? sidebarServiceInsights[openInsightIndex] ?? null : null;
 
   /* 
   ==================================================================================================
@@ -76,7 +80,7 @@ export default function DashboardClient() {
         hydrateFromParams({
           districtName: districtNameParam, // 온보딩 화면에서 넘어온 자치구명
           dongName: searchParams.get("dongName"),  // 대시보드 화면 또는 채팅창에서 선택한 행정동명
-          serviceCode: searchParams.get("serviceCode"), // 온보딩 화면에서 넘어온 업종코드 (업종명 선택 -> mockData.ts에서 업종코드로 매핑)
+          serviceCode: searchParams.get("serviceCode"), // 온보딩 화면에서 넘어온 업종코드
           timeSlot: searchParams.get("time"), // 온보딩 화면에서 넘어온 시간대 (ex. t0006)
           ageGroup: searchParams.get("age"), // 온보딩 화면에서 넘어온 연령대 (ex. age30)
         })
@@ -100,6 +104,33 @@ export default function DashboardClient() {
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
+
+  // 사이드바 랭킹 기준(분기별/시간대별/연령대별)이 바뀔 때마다 TOP5 업종 + 위험수준 정보를 백엔드에서 가져온다.
+  useEffect(() => {
+    if (!hydrated || !filters.districtName) return;
+
+    const basis = filters.rankingBasis;
+    if (basis === "time" && !filters.timeSlot) return;
+    if (basis === "age" && !filters.ageGroup) return;
+
+    async function fetchSidebarServiceRank() {
+      try {
+        const data = await getSidebarServiceRank({
+          districtName: filters.districtName!,
+          dongName: filters.dongName || null,
+          quarter: toQuarterCode(filters.quarter),
+          rankingBasis: basis,
+          timeCode: basis === "time" ? filters.timeSlot : null,
+          ageCode: basis === "age" ? filters.ageGroup : null,
+        });
+        setSidebarServiceInsights(toSidebarServiceInsights(data.sidebarServiceRanks));
+      } catch (error) {
+        console.error("사이드바 TOP5 업종 조회 실패", error);
+      }
+    }
+
+    fetchSidebarServiceRank();
+  }, [hydrated, filters.districtName, filters.dongName, filters.quarter, filters.rankingBasis, filters.timeSlot, filters.ageGroup]);
 
   /* 
   ==================================================================================  
@@ -180,6 +211,7 @@ export default function DashboardClient() {
           serviceCode={filters.serviceCode}
           timeSlot={filters.timeSlot}
           ageGroup={filters.ageGroup}
+          sidebarServiceInsights={sidebarServiceInsights}
           onRankingBasisChange={handleRankingBasisChange}
           onOpenInsight={setOpenInsightIndex}
         />
@@ -208,7 +240,14 @@ export default function DashboardClient() {
             <DonutPanel id="age" title={`연령대별 매출분포 (${serviceName})`} centerLabel="연령대" data={toAgeDonutData(ageSales)} />
           </section>
 
-          <SuitabilityPanel serviceCode={filters.serviceCode} timeSlot={filters.timeSlot} ageGroup={filters.ageGroup} timeSales={timeSales} ageSales={ageSales} />
+          <SuitabilityPanel
+            serviceCode={filters.serviceCode}
+            timeSlot={filters.timeSlot}
+            ageGroup={filters.ageGroup}
+            timeSales={timeSales}
+            ageSales={ageSales}
+            sidebarServiceInsights={sidebarServiceInsights}
+          />
         </div>
       </div>
 

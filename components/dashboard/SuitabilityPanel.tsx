@@ -1,13 +1,19 @@
 import {
-  findInsightByServiceCode,
-  findTimeSlotByCode,
   findAgeGroupByCode,
-  type RankedShare,
+  findTimeSlotByCode,
   type SalesByAges,
   type SalesByTimes,
 } from "@/lib/mockData";
+import type { SidebarServiceInsight } from "@/lib/sidebarTransforms";
 
 const LEVEL_LABEL: Record<string, string> = { risk: "위험", warn: "보통", good: "양호" };
+
+interface RankedShare {
+  label: string;
+  pct: number;
+  rank: number;
+  total: number;
+}
 
 interface SuitabilityPanelProps {
   serviceCode: string | null;
@@ -15,6 +21,7 @@ interface SuitabilityPanelProps {
   ageGroup: string | null;
   timeSales: SalesByTimes[];
   ageSales: SalesByAges[];
+  sidebarServiceInsights: SidebarServiceInsight[];
 }
 
 // DashboardClient에서 받은 실제 시간대별 매출액을 기준으로 비중과 순위를 계산한다.
@@ -53,8 +60,14 @@ function rankAgeGroupBySales(code: string | null, ageSales: SalesByAges[]): Rank
   };
 }
 
-export default function SuitabilityPanel({ serviceCode, timeSlot, ageGroup, timeSales, ageSales }: SuitabilityPanelProps) {
-  // 온보딩에서 업종/시간대/연령대 조건을 하나도 받지 못한 경우 기본 안내만 보여준다.
+export default function SuitabilityPanel({
+  serviceCode,
+  timeSlot,
+  ageGroup,
+  timeSales,
+  ageSales,
+  sidebarServiceInsights,
+}: SuitabilityPanelProps) {
   if (!serviceCode && !timeSlot && !ageGroup) {
     return (
       <section className="suitability-panel">
@@ -64,12 +77,9 @@ export default function SuitabilityPanel({ serviceCode, timeSlot, ageGroup, time
     );
   }
 
-  // 업종명/시간대명/연령대명은 고정 코드 목록에서 찾는다.
-  const insight = findInsightByServiceCode(serviceCode);
+  const insight = sidebarServiceInsights.find((item) => item.serviceCode === serviceCode) ?? null;
   const timeInfo = findTimeSlotByCode(timeSlot);
   const ageInfo = findAgeGroupByCode(ageGroup);
-
-  // DashboardClient에서 받은 실제 매출액 기준으로 선택한 시간대/연령대의 순위와 비중을 계산한다.
   const timeRank = rankTimeSlotBySales(timeSlot, timeSales);
   const ageRank = rankAgeGroupBySales(ageGroup, ageSales);
 
@@ -81,19 +91,19 @@ export default function SuitabilityPanel({ serviceCode, timeSlot, ageGroup, time
           <b>업종 위험도</b>
           {insight ? (
             <span>
-              선택하신 <strong>{insight.name}</strong>은(는) 현재 <strong>{LEVEL_LABEL[insight.level]}</strong>{" "}
+              선택하신 <strong>{insight.serviceName}</strong>은(는) 현재 <strong>{LEVEL_LABEL[insight.riskLevel]}</strong>{" "}
               등급입니다. {insight.message}
             </span>
           ) : (
-            <span>선택한 업종에 대한 데이터가 아직 없습니다.</span>
+            <span>선택한 업종이 현재 TOP5 목록에 없어 위험도 메시지를 표시할 수 없습니다.</span>
           )}
         </li>
         <li>
           <b>시간대 매출 순위</b>
           {timeInfo && timeRank ? (
             <span>
-              <strong>{timeInfo.label}</strong>는 전체 {timeRank.total}개 시간대 중 매출 비중{" "}
-              <strong>{timeRank.rank}위</strong>({timeRank.pct}%)입니다.
+              <strong>{timeInfo.label}</strong>는 전체 {timeRank.total}개 시간대 중 매출 비중 <strong>{timeRank.rank}위</strong>
+              ({timeRank.pct}%)입니다.
             </span>
           ) : (
             <span>설정한 주요 영업 시간대가 없어 전체 시간대 데이터를 기준으로 안내합니다.</span>
@@ -103,8 +113,7 @@ export default function SuitabilityPanel({ serviceCode, timeSlot, ageGroup, time
           <b>연령대 매출 비중</b>
           {ageInfo && ageRank ? (
             <span>
-              <strong>{ageInfo.label}</strong> 고객 매출 비중은 <strong>{ageRank.pct}%</strong>로 전체{" "}
-              {ageRank.total}개 연령대 중 {ageRank.rank}위입니다.
+              <strong>{ageInfo.label}</strong> 고객 매출 비중은 <strong>{ageRank.pct}%</strong>로 전체 {ageRank.total}개 연령대 중 {ageRank.rank}위입니다.
             </span>
           ) : (
             <span>설정한 타겟 연령대가 없어 전체 연령대 데이터를 기준으로 안내합니다.</span>
