@@ -24,9 +24,9 @@ export default function BarChartPanel({
       <div className="bar-chart" aria-label="분기 매출금액 TOP 5 업종 막대그래프">
         {serviceSalesRanks.map((service) => (
           <div key={service.serviceCode} className="bar-item" style={{ ["--h" as string]: `${service.barHeightPct}%` }}>
-            <span>{service.salesLabel}</span>
+            <text><b>{service.salesLabel}</b></text>
             <i />
-            <small>{service.serviceName}</small>
+            <text>{service.serviceName}</text>
           </div>
         ))}
       </div>
