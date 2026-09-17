@@ -12,8 +12,13 @@ import type {
     ServiceSalesRank,
 } from "@/lib/mockData";
 import type { FiltersState } from "@/store/filtersSlice";
+import { getSidebarServiceRank } from "@/lib/sidebarApi";
+import { toSidebarServiceInsights, type SidebarServiceInsight } from "@/lib/sidebarTransforms";
 
-type DashboardFilters = Pick<FiltersState, "districtName" | "dongName" | "serviceCode" | "quarter">;
+type DashboardFilters = Pick<
+    FiltersState,
+    "districtName" | "dongName" | "serviceCode" | "quarter" | "rankingBasis" | "timeSlot" | "ageGroup"
+>;
 type UseDashboardDataParams = {
     hydrated: boolean;
     filters: DashboardFilters;
@@ -37,7 +42,8 @@ export function useDashboardData({ hydrated, filters }:
     const [timeSales, setTimeSales] = useState<SalesByTimes[]>([]);
     // 연령대별 매출액
     const [ageSales, setAgeSales] = useState<SalesByAges[]>([]);
-
+    // 사이드바 관련 데이터
+    const [sidebarServiceInsights, setSidebarServiceInsights] = useState<SidebarServiceInsight[]>([]);
 
     /* 
     ==================================================================================================
@@ -83,6 +89,16 @@ export function useDashboardData({ hydrated, filters }:
 
         fetchAgeSales();
     }, [hydrated, filters.districtName, filters.dongName, filters.serviceCode, filters.quarter]);
+
+    // 사이드바 분기별/시간대별/연령대별 TOP5 업종 및 개폐업률 정보 가져오기
+    useEffect(() => {
+        if (!hydrated || !filters.districtName) return;
+        const basis = filters.rankingBasis;
+        if (basis === "time" && !filters.timeSlot) return;
+        if (basis === "age" && !filters.ageGroup) return;
+
+        fetchSidebarServiceRank();
+    }, [hydrated, filters.districtName, filters.dongName, filters.quarter, filters.rankingBasis, filters.timeSlot, filters.ageGroup])
 
     /* 
     ==================================================================================================
@@ -187,12 +203,32 @@ export function useDashboardData({ hydrated, filters }:
 
     }
 
+
+    // 사이드바 랭킹 기준(분기별/시간대별/연령대별)이 바뀔 때마다 TOP5 업종 + 위험수준 정보를 백엔드에서 가져온다.
+    async function fetchSidebarServiceRank() {
+        const basis = filters.rankingBasis;
+
+        try {
+            const data = await getSidebarServiceRank({
+                districtName: filters.districtName!,
+                dongName: filters.dongName || null,
+                quarter: toQuarterCode(filters.quarter),
+                rankingBasis: basis,
+                timeCode: basis === "time" ? filters.timeSlot : null,
+                ageCode: basis === "age" ? filters.ageGroup : null,
+            });
+            setSidebarServiceInsights(toSidebarServiceInsights(data.sidebarServiceRanks));
+        } catch (error) {
+            console.error("사이드바 TOP5 업종 조회 실패", error);
+        }
+    }
     return {
         totalSalesLabel,
         top5ServiceSales,
         weekdaySales,
         timeSales,
         ageSales,
+        sidebarServiceInsights,
     };
 
 }

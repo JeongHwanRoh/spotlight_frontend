@@ -22,10 +22,6 @@ import {
   toTimeDonutData,
 } from "@/lib/dashboardTransforms";
 
-import { getSidebarServiceRank } from "@/lib/sidebarApi";
-import { toSidebarServiceInsights, type SidebarServiceInsight } from "@/lib/sidebarTransforms";
-import { toQuarterCode } from "@/lib/formatter";
-
 import { useDashboardData } from "@/hooks/useDashboardData";
 import Topbar from "./Topbar";
 import Sidebar from "./Sidebar";
@@ -45,7 +41,6 @@ export default function DashboardClient() {
 
   const [hydrated, setHydrated] = useState(false);
   const [openInsightIndex, setOpenInsightIndex] = useState<number | null>(null);
-  const [sidebarServiceInsights, setSidebarServiceInsights] = useState<SidebarServiceInsight[]>([]);
 
   // 필터 조건이 준비되면 useDashboardData가 매출 API들을 호출하고,
   // 응답을 화면 표시용 데이터로 변환해 반환한다.
@@ -55,6 +50,7 @@ export default function DashboardClient() {
     weekdaySales,
     timeSales,
     ageSales,
+    sidebarServiceInsights,
   } = useDashboardData({
     hydrated,
     filters,
@@ -104,33 +100,6 @@ export default function DashboardClient() {
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
-
-  // 사이드바 랭킹 기준(분기별/시간대별/연령대별)이 바뀔 때마다 TOP5 업종 + 위험수준 정보를 백엔드에서 가져온다.
-  useEffect(() => {
-    if (!hydrated || !filters.districtName) return;
-
-    const basis = filters.rankingBasis;
-    if (basis === "time" && !filters.timeSlot) return;
-    if (basis === "age" && !filters.ageGroup) return;
-
-    async function fetchSidebarServiceRank() {
-      try {
-        const data = await getSidebarServiceRank({
-          districtName: filters.districtName!,
-          dongName: filters.dongName || null,
-          quarter: toQuarterCode(filters.quarter),
-          rankingBasis: basis,
-          timeCode: basis === "time" ? filters.timeSlot : null,
-          ageCode: basis === "age" ? filters.ageGroup : null,
-        });
-        setSidebarServiceInsights(toSidebarServiceInsights(data.sidebarServiceRanks));
-      } catch (error) {
-        console.error("사이드바 TOP5 업종 조회 실패", error);
-      }
-    }
-
-    fetchSidebarServiceRank();
-  }, [hydrated, filters.districtName, filters.dongName, filters.quarter, filters.rankingBasis, filters.timeSlot, filters.ageGroup]);
 
   /* 
   ==================================================================================  
